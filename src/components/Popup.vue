@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div id="app">
         <h1>GPT Test Case Generator</h1>
         <div>
             <div>
@@ -33,14 +33,21 @@
 </template>
   
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, onMounted} from "vue";
 
 export default defineComponent({
     setup() {
         const prompt = ref("Default prompt text");
         const defectDescription = ref("");
         const generatedTestCase = ref("");
-
+        onMounted(() => {
+            // Retrieve the test case from local storage when the component is mounted
+            chrome.storage.local.get("testCase", (result) => {
+                if (result.testCase) {
+                    generatedTestCase.value = result.testCase;
+                }
+            });
+        });
         function generate() {
             // Handle generation of test case
         }
