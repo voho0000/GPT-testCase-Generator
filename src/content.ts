@@ -1,19 +1,18 @@
 chrome.runtime.onMessage.addListener(
-    (request: { action: string }, sender: any, sendResponse: any) => {
-      if (request.action === "getSelectedText") {
-        const selectedText = window.getSelection()!.toString();
+    (request: { action: string, prompt: string, defectDescription: string }, sender: any, sendResponse: any) => {
+      if (request.action === "generateTestCase") {
+        const prompt = request.prompt;
+        const defectDescription = request.defectDescription;
         fetch("http://127.0.0.1:5000/generate_test_case", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ defect_description: selectedText }),
+          body: JSON.stringify({ prompt: prompt, defectDescription: defectDescription }),
         })
           .then((response) => response.json())
           .then((data) => {
-            // Store the received test case in the local storage
-            chrome.storage.local.set({ testCase: data.test_steps });
-  
+            chrome.storage.local.set({ "testCase": data.test_steps });
             // Send a message to the background script to update the popup
             chrome.runtime.sendMessage({
               action: "testCaseGenerated",

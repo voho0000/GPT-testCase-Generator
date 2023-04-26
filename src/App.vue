@@ -16,6 +16,6 @@ import Popup from './components/Popup.vue'
   text-align: center;
   color: #2c3e50;
   margin-top: 20px;
-  min-width: 350px;
+  min-width: 400px;
 }
 </style>

@@ -4,9 +4,10 @@
         <div>
             <div>
                 <label>Prompt:</label>
+                <button @click="resetPrompt">Reset</button>
             </div>
             <div>
-                <textarea v-model="prompt" class="textarea" rows="3"></textarea>
+                <textarea v-model="prompt" class="textarea" rows="4" wrap="soft"></textarea>
             </div>
         </div>
         <div>
@@ -14,7 +15,7 @@
                 <label>Defect Description:</label>
             </div>
             <div>
-                <textarea v-model="defectDescription" class="textarea" rows="5"></textarea>
+                <textarea v-model="defectDescription" class="textarea" rows="8" wrap="soft"></textarea>
             </div>
         </div>
         <div>
@@ -22,7 +23,7 @@
                 <label>Generated Test Case:</label>
             </div>
             <div>
-                <textarea v-model="generatedTestCase" class="textarea" rows="10"></textarea>
+                <textarea v-model="testCase" class="textarea" rows="11" wrap="soft"></textarea>
             </div>
         </div>
         <div class="button-container">
@@ -33,36 +34,105 @@
 </template>
   
 <script lang="ts">
-import { defineComponent, ref, onMounted} from "vue";
+import { defineComponent, ref, onMounted, watch } from "vue";
 
 export default defineComponent({
     setup() {
-        const prompt = ref("Default prompt text");
-        const defectDescription = ref("");
-        const generatedTestCase = ref("");
+        const defaultPrompt = "請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例: ";
+        const prompt = ref("請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例: ");
+        const defectDescription = ref('');
+        const testCase = ref("");
+
+        function updateTestCase(testCaseData: string) {
+            testCase.value = testCaseData;
+        }
+
         onMounted(() => {
-            // Retrieve the test case from local storage when the component is mounted
-            chrome.storage.local.get("testCase", (result) => {
-                if (result.testCase) {
-                    generatedTestCase.value = result.testCase;
+            chrome.runtime.onMessage.addListener((request: { action: string; testCase: string }, sender: any, sendResponse: any) => {
+                if (request.action === "testCaseGenerated") {
+                    updateTestCase(request.testCase);
+                }
+            });
+
+            chrome.storage.local.get("prompt", (data) => {
+                if (data.prompt) {
+                    prompt.value = data.prompt;
+                } else {
+                    prompt.value = ''
+                }
+            });
+
+            chrome.storage.local.get("defectDescription", (data) => {
+                if (data.defectDescription) {
+                    defectDescription.value = data.defectDescription;
+                } else {
+                    defectDescription.value = ''
+                }
+            });
+
+            chrome.storage.local.get("testCase", (data) => {
+                if (data.testCase) {
+                    testCase.value = data.testCase;
+                } else {
+                    testCase.value = ''
                 }
             });
         });
+
+        function resetPrompt() {
+            prompt.value = defaultPrompt;
+            chrome.storage.local.set({ "prompt": defaultPrompt });
+        }
+
         function generate() {
-            // Handle generation of test case
+            // Send a message to the content script with the prompt and defect description
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                const activeTab = tabs[0];
+                chrome.tabs.sendMessage(activeTab.id!, {
+                    action: "generateTestCase",
+                    prompt: prompt.value,
+                    defectDescription: defectDescription.value,
+                });
+            });
         }
 
         function save() {
             // Handle saving of JSON file
         }
 
-        return { prompt, defectDescription, generatedTestCase, generate, save };
+        // update prompt value when value changes
+        watch(prompt, (newValue) => {
+            // Save the updated prompt value to local storage
+            chrome.storage.local.set({ "prompt": newValue });
+        });
+
+        // update defectDescription value when value changes
+        watch(defectDescription, (newValue) => {
+            // Save the updated defectDescription value to local storage
+            chrome.storage.local.set({ "defectDescription": newValue });
+        });
+
+        // update defectDescription value when value changes
+        watch(testCase, (newValue) => {
+            // Save the updated defectDescription value to local storage
+            chrome.storage.local.set({ "testCase": newValue }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error(chrome.runtime.lastError)
+                }
+            }
+            );
+        });
+
+        return { prompt, defectDescription, testCase, resetPrompt, generate, save };
     },
 });
 </script>
 <style scoped>
 .textarea {
     width: 100%;
+    white-space: pre-line;
+    word-wrap: break-word;
+    /* for Firefox compatibility */
 }
 
 .button-container {
