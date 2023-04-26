@@ -18,4 +18,5 @@ import Popup from './components/Popup.vue'
   margin-top: 20px;
   min-width: 400px;
 }
+
 </style>

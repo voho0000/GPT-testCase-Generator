@@ -1,45 +1,62 @@
 <template>
     <div id="app">
         <h1>GPT Test Case Generator</h1>
-        <div>
+        <Navigation :current-tab="currentTab" @change-tab="changeTab" />
+        <div v-if="currentTab === 'Popup'">
             <div>
-                <label>Prompt:</label>
-                <button @click="resetPrompt">Reset</button>
+                <div>
+                    <label>Prompt:</label>
+                    <button @click="resetPrompt">Reset</button>
+                </div>
+                <div>
+                    <textarea v-model="prompt" class="textarea" rows="4"></textarea>
+                </div>
             </div>
             <div>
-                <textarea v-model="prompt" class="textarea" rows="4" wrap="soft"></textarea>
+                <div>
+                    <label>Defect Description:</label>
+                </div>
+                <div>
+                    <textarea v-model="defectDescription" class="textarea" rows="8"></textarea>
+                </div>
+            </div>
+            <div>
+                <div>
+                    <label>Generated Test Case:</label>
+                </div>
+                <div>
+                    <textarea v-model="testCase" class="textarea" rows="11"></textarea>
+                </div>
+            </div>
+            <div class="button-container">
+                <button @click="save">Save</button>
+                <button @click="generate" class="generate-button">Generate</button>
             </div>
         </div>
-        <div>
-            <div>
-                <label>Defect Description:</label>
-            </div>
-            <div>
-                <textarea v-model="defectDescription" class="textarea" rows="8" wrap="soft"></textarea>
-            </div>
-        </div>
-        <div>
-            <div>
-                <label>Generated Test Case:</label>
-            </div>
-            <div>
-                <textarea v-model="testCase" class="textarea" rows="11" wrap="soft"></textarea>
-            </div>
-        </div>
-        <div class="button-container">
-            <button @click="save">Save</button>
-            <button @click="generate" class="generate-button">Generate</button>
-        </div>
+        <Form v-else :testCase="testCase" />
     </div>
 </template>
   
 <script lang="ts">
+import Navigation from "./Navigation.vue";
+import Form from "./Form.vue";
 import { defineComponent, ref, onMounted, watch } from "vue";
 
 export default defineComponent({
+    components: {
+        Navigation,
+        Form,
+    },
     setup() {
-        const defaultPrompt = "請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例: ";
-        const prompt = ref("請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例: ");
+        const currentTab = ref<string>("Popup");
+
+        function changeTab(newTab: string) {
+            currentTab.value = newTab;
+        }
+
+
+        const defaultPrompt = "請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例，需要包含Name, Pre Condition, Test Step, Expected Result ";
+        const prompt = ref("請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例，需要包含Name, Pre Condition, Test Step, Expected Result ");
         const defectDescription = ref('');
         const testCase = ref("");
 
@@ -123,7 +140,11 @@ export default defineComponent({
             );
         });
 
-        return { prompt, defectDescription, testCase, resetPrompt, generate, save };
+        return {
+            currentTab,
+            changeTab,
+            prompt, defectDescription, testCase, resetPrompt, generate, save
+        };
     },
 });
 </script>
@@ -132,7 +153,6 @@ export default defineComponent({
     width: 100%;
     white-space: pre-line;
     word-wrap: break-word;
-    /* for Firefox compatibility */
 }
 
 .button-container {

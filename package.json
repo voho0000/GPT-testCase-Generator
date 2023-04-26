@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.2.25"
+    "@vueform/multiselect": "^2.6.2",
+    "vue": "^3.2.47"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^1.0.14",
