@@ -80,6 +80,7 @@
 <script lang="ts">
 import { defineComponent, ref, watch } from 'vue';
 import Multiselect from '@vueform/multiselect'
+import axios from 'axios';
 
 export default defineComponent({
     components: {
@@ -147,6 +148,23 @@ export default defineComponent({
 
         function createTask() {
             // Implement the logic for creating a task using the form data
+            const formDataString = localStorage.getItem('formData');
+            if (formDataString) {
+                const formData = JSON.parse(formDataString);
+                console.log(formData);
+                axios.post('http://127.0.0.1:5000/create_task', formData)
+                    .then(response => {
+                        // Handle response from server
+                        // console.log(response.data);
+                    })
+                    .catch(error => {
+                        // Handle error
+                        console.log(error);
+                    });
+            } else {
+                console.error("No formData found in localStorage");
+            };
+
         }
 
         // Watch for changes to reactive properties and update formData real time
