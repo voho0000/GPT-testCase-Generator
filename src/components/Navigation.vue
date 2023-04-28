@@ -1,7 +1,7 @@
 <template>
     <nav>
         <ul>
-            <li :class="{ active: currentTab === 'Popup' }" @click="$emit('change-tab', 'Popup')">Popup</li>
+            <li :class="{ active: currentTab === 'Popup' }" @click="$emit('change-tab', 'Popup')">Test Case</li>
             <li :class="{ active: currentTab === 'PopupTaskForm' }" @click="$emit('change-tab', 'PopupTaskForm')">Task Form
             </li>
         </ul>

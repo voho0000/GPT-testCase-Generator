@@ -186,9 +186,9 @@ def create_task():
         "custom_fields": custom_fields
     })
 
-    print(result['gid'])
+    print(result["permalink_url"])
 
-    return jsonify(task_gid=result['gid'])
+    return jsonify(task_url=result["permalink_url"])
 
 
 if __name__ == '__main__':

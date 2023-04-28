@@ -72,7 +72,14 @@
                     <option v-for="option in generatedByOptions" :key="option" :value="option">{{ option }}</option>
                 </select>
             </div>
-            <button type="button" @click="createTask">Create</button>
+            <div class="button-container">
+                <button type="button" @click="clearLocalStorage">Clear</button>
+                <button type="button" @click="createTask">Create</button>
+            </div>
+            <div>
+                <label for="taskUrl">Created Task URL:</label>
+                <a :href="taskUrl" target="_blank" v-if="taskUrl">link</a>
+            </div>
         </form>
     </div>
 </template>
@@ -81,6 +88,10 @@
 import { defineComponent, ref, watch } from 'vue';
 import Multiselect from '@vueform/multiselect'
 import axios from 'axios';
+import { toast } from 'vue-sonner';
+//import Toastify from 'toastify-js';
+import { useToast } from 'vue-toast-notification';
+
 
 export default defineComponent({
     components: {
@@ -103,6 +114,8 @@ export default defineComponent({
         const caseSource = ref('Defect');
         const mainTicket = ref('');
         const generatedBy = ref('gpt-3.5-turbo');
+
+        const taskUrl = ref<string | null>(localStorage.getItem('taskUrl'));
 
         if (props.testCase.includes('\n\n')) {
             name.value = props.testCase.split('\n\n')[0]?.split('Name: ')[1];
@@ -155,7 +168,9 @@ export default defineComponent({
                 axios.post('http://127.0.0.1:5000/create_task', formData)
                     .then(response => {
                         // Handle response from server
-                        // console.log(response.data);
+                        console.log(response.data);
+                        taskUrl.value = response.data.task_url;
+                        localStorage.setItem('taskUrl', taskUrl.value!);
                     })
                     .catch(error => {
                         // Handle error
@@ -165,6 +180,10 @@ export default defineComponent({
                 console.error("No formData found in localStorage");
             };
 
+        }
+        function clearLocalStorage() {
+            localStorage.removeItem('taskUrl');
+            taskUrl.value = null;
         }
 
         // Watch for changes to reactive properties and update formData real time
@@ -183,6 +202,12 @@ export default defineComponent({
             };
 
             localStorage.setItem('formData', JSON.stringify(updatedFormData));
+
+        });
+
+        // Watch the taskUrl property for changes and update localStorage
+        watch(taskUrl, (newValue) => {
+            localStorage.setItem('taskUrl', newValue || '');
         });
 
         return {
@@ -202,6 +227,8 @@ export default defineComponent({
             caseSourceOptions,
             generatedByOptions,
             createTask,
+            taskUrl,
+            clearLocalStorage,
         };
     }
 })
@@ -219,6 +246,11 @@ input {
 
 .form-field {
     padding-bottom: 10px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
 }
 </style>
 <style src="@vueform/multiselect/themes/default.css"></style>
