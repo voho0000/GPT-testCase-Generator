@@ -29,7 +29,7 @@
                 </div>
             </div>
             <div class="button-container">
-                <button @click="save">Save</button>
+                <button @click="get_ticket">Get a Asana ticket</button>
                 <button @click="generate" class="generate-button">Generate</button>
             </div>
         </div>
@@ -55,8 +55,8 @@ export default defineComponent({
         }
 
 
-        const defaultPrompt = "請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例，需要包含Name, Pre Condition, Test Step, Expected Result ";
-        const prompt = ref("請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例，需要包含Name, Pre Condition, Test Step, Expected Result ");
+        const defaultPrompt = "我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例，需要包含Name, Pre-Condition, Test Step, Expected Result ";
+        const prompt = ref("我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例，需要包含Name, Pre-Condition, Test Step, Expected Result ");
         const defectDescription = ref('');
         const testCase = ref("");
 
@@ -113,9 +113,21 @@ export default defineComponent({
             });
         }
 
-        function save() {
-            // Handle saving of JSON file
+        function get_ticket() {
+            console.log("get ticket hit!")
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                const activeTab = tabs[0];
+                const url = activeTab.url;
+                chrome.storage.local.get(["formData"], (result) => {
+                    const formData = result.formData || { mainTicket: '' };
+                    formData.mainTicket = url;
+                    chrome.storage.local.set({ formData }, () => {
+                        console.log(`mainTicket set to ${url}`);
+                    });
+                });
+            });
         }
+
 
         // update prompt value when value changes
         watch(prompt, (newValue) => {
@@ -143,7 +155,7 @@ export default defineComponent({
         return {
             currentTab,
             changeTab,
-            prompt, defectDescription, testCase, resetPrompt, generate, save
+            prompt, defectDescription, testCase, resetPrompt, generate, get_ticket
         };
     },
 });

@@ -23,7 +23,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request: { action: string, testCase: string }) => {
     if (request.action === "showTestCase") {
         const gptGeneratedTestCase = request.testCase;
         async () => {

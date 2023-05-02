@@ -141,11 +141,9 @@ export default defineComponent({
 
         const generatedByOptions = ['Human', 'gpt-3.5-turbo']
 
-        // load saved form data from localStorage on component mount
-        const savedData = localStorage.getItem('formData');
-        if (savedData) {
-            const formData = JSON.parse(savedData);
-
+        // load saved form data from chrome.storage.local on component mount
+        chrome.storage.local.get(["formData"], (result) => {
+            const formData = result.formData || {};
             name.value = formData.name;
             caseSuite.value = formData.caseSuite;
             manualTestCoverage.value = formData.manualTestCoverage;
@@ -154,9 +152,9 @@ export default defineComponent({
             expectedResult.value = formData.expectedResult;
             manualTestEnvironment.value = formData.manualTestEnvironment;
             caseSource.value = formData.caseSource;
-            mainTicket.value = formData.mainTicket;
+            mainTicket.value = formData.mainTicket || ""; // use chrome.storage.local to get mainTicket value
             generatedBy.value = formData.generatedBy;
-        }
+        });
 
 
         function createTask() {
@@ -201,7 +199,7 @@ export default defineComponent({
                 generatedBy: generatedBy.value,
             };
 
-            localStorage.setItem('formData', JSON.stringify(updatedFormData));
+            chrome.storage.local.set({ formData: updatedFormData });
 
         });
 
