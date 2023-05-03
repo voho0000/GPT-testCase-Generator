@@ -85,7 +85,7 @@
             <div v-else></div> <!-- Properly closed div for v-else -->
             <div class="button-container">
                 <button type="button" @click="clearLocalStorage">Clear</button>
-                <button type="submit">Create</button>
+                <button type="submit" :disabled="isCreateLoading">Create</button>
             </div>
             <div>
                 <label for="taskUrl">Created Task URL:</label>
