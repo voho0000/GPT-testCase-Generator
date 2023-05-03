@@ -5,7 +5,7 @@
                 Test Case {{ index + 1 }}
             </button>
         </div>
-        <form  @submit.prevent="createTask">
+        <form @submit.prevent="createTask">
             <div class="form-field">
                 <div>
                     <label for="name">Name:<span class="required-star">*</span></label>
@@ -78,6 +78,11 @@
                     <option v-for="option in generatedByOptions" :key="option" :value="option">{{ option }}</option>
                 </select>
             </div>
+            <div v-if="isCreateLoading" class="spinner-container">
+                <div class="spinner"></div>
+                <p>Creating asana ticket...</p>
+            </div>
+            <div v-else></div> <!-- Properly closed div for v-else -->
             <div class="button-container">
                 <button type="button" @click="clearLocalStorage">Clear</button>
                 <button type="submit">Create</button>
@@ -119,6 +124,7 @@ export default defineComponent({
         currentTab: String,
     },
     setup(props) {
+        const isCreateLoading = ref(false);
 
         const caseSuite = ref([]);
         const manualTestCoverage = ref('Partial');
@@ -229,6 +235,7 @@ export default defineComponent({
                     if (formDataString) {
                         const formData = JSON.parse(formDataString);
                         console.log(formData);
+                        isCreateLoading.value = true;
                         axios.post('http://127.0.0.1:5000/create_task', formData)
                             .then(response => {
                                 // Handle response from server
@@ -236,6 +243,7 @@ export default defineComponent({
                                 if (response.data.task_url) {
                                     taskUrl.value = response.data.task_url;
                                     chrome.storage.local.set({ taskUrl: taskUrl.value });
+                                    isCreateLoading.value = false;
                                 } else {
                                     console.log('no created task url')
                                 };
@@ -285,7 +293,7 @@ export default defineComponent({
                 mainTicket: mainTicket.value,
                 generatedBy: generatedBy.value,
             };
-            chrome.storage.local.set({ formData: JSON.stringify(updatedFormData)});
+            chrome.storage.local.set({ formData: JSON.stringify(updatedFormData) });
             console.log('new data set');
         });
 
@@ -316,6 +324,7 @@ export default defineComponent({
             selectedTestCase,
             testCases,
             selectTestCase,
+            isCreateLoading
         };
     }
 })
