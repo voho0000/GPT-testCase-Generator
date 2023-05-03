@@ -12,7 +12,7 @@ AZURE_API_KEY = os.getenv('AZURE_API_KEY')
 
 openai.api_type = "azure"
 # replace with you api endpoint
-openai.api_base = "https://YourOwn-OpenAI-EndPoint.openai.azure.com/"
+openai.api_base =  "https://YourOwn-OpenAI-EndPoint.openai.azure.com/" #"https://user1-create-gpt.openai.azure.com/"
 openai.api_version = "2023-03-15-preview"
 openai.api_key = AZURE_API_KEY
 
@@ -47,7 +47,8 @@ def generate_test_case():
 
     # If you use GPT 3.5 or GPT 4, use the following code to call api
     response = openai.ChatCompletion.create(
-        engine="gpt-35-turbo",  # engine="gpt-4",
+        #engine="gpt-35-turbo",  
+        engine="gpt-4",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": full_prompt}

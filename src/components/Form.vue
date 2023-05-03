@@ -1,25 +1,31 @@
 <template>
     <div id="task-form">
-        <form>
+        <div v-if="testCases.length > 1">
+            <button v-for="(test, index) in testCases" :key="index" @click="selectTestCase(index)">
+                Test Case {{ index + 1 }}
+            </button>
+        </div>
+        <form @submit.prevent="createTask">
             <div class="form-field">
                 <div>
-                    <label for="name">Name:</label>
+                    <label for="name">Name:<span class="required-star">*</span></label>
                 </div>
                 <div>
-                    <textarea id="name" v-model="name"></textarea>
+                    <textarea id="name" v-model="name" required></textarea>
                 </div>
             </div>
             <div class="form-field">
-                <label for="case-suite">Case Suite:</label>
-                <Multiselect v-model="caseSuite" mode="tags" placeholder="Select options" :searchable="true"
+                <label for="case-suite">Case Suite:<span class="required-star">*</span></label>
+                <Multiselect v-model="caseSuite" required mode="tags" placeholder="Select options" :searchable="true"
                     :close-on-select="false" :options="caseSuiteOptions" />
 
             </div>
             <div class="form-field">
-                <label for="manual-test-coverage">Manual Test Coverage:</label>
-                <select id="manual-test-coverage" v-model="manualTestCoverage">
+                <label for="manual-test-coverage">Manual Test Coverage: <span class="required-star">*</span></label>
+                <select id="manual-test-coverage" v-model="manualTestCoverage" required>
                     <option disabled value="">Please select one</option>
-                    <option v-for="option in manualTestCoverageOptions" :key="option" :value="option">{{ option }}</option>
+                    <option v-for="option in manualTestCoverageOptions" :key="option" :value="option">{{ option }}
+                    </option>
                 </select>
             </div>
             <div class="form-field">
@@ -32,18 +38,18 @@
             </div>
             <div class="form-field">
                 <div>
-                    <label for="test-step">Test Step:</label>
+                    <label for="test-step">Test Step:<span class="required-star">*</span></label>
                 </div>
                 <div>
-                    <textarea id="test-step" v-model="testStep" rows="7"></textarea>
+                    <textarea id="test-step" v-model="testStep" rows="7" required></textarea>
                 </div>
             </div>
             <div class="form-field">
                 <div>
-                    <label for="expected-result">Expected Result:</label>
+                    <label for="expected-result">Expected Result:<span class="required-star">*</span></label>
                 </div>
                 <div>
-                    <textarea id="expected-result" v-model="expectedResult" rows="7"></textarea>
+                    <textarea id="expected-result" v-model="expectedResult" rows="7" required></textarea>
                 </div>
             </div>
             <div class="form-field">
@@ -62,7 +68,7 @@
                 </select>
             </div>
             <div class="form-field">
-                <label for="main-ticket">Main Ticket:</label>
+                <label for="main-ticket">Main Ticket: </label>
                 <input id="main-ticket" type="url" v-model="mainTicket" placeholder="asana defect task url" />
             </div>
             <div class="form-field">
@@ -72,27 +78,54 @@
                     <option v-for="option in generatedByOptions" :key="option" :value="option">{{ option }}</option>
                 </select>
             </div>
-            <button type="button" @click="createTask">Create</button>
+            <div v-if="isCreateLoading" class="spinner-container">
+                <div class="spinner"></div>
+                <p>Creating asana ticket...</p>
+            </div>
+            <div v-else></div> <!-- Properly closed div for v-else -->
+            <div class="button-container">
+                <button type="button" @click="clearLocalStorage">Clear</button>
+                <button type="submit" :disabled="isCreateLoading">Create</button>
+            </div>
+            <div>
+                <label for="taskUrl">Created Task URL:</label>
+                <a :href="taskUrl" target="_blank" v-if="taskUrl">link</a>
+            </div>
         </form>
     </div>
 </template>
   
 <script lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+/// <reference types="chrome" />
+
+
+import { defineComponent, ref, watch, onMounted } from 'vue';
 import Multiselect from '@vueform/multiselect'
 import axios from 'axios';
+import Navigation from "./Navigation.vue";
+import { caseSuiteOptions, manualTestCoverageOptions, manualTestEnvironmentOptions, caseSourceOptions, generatedByOptions } from './options';
+
+
 
 export default defineComponent({
     components: {
-        Multiselect
+        Multiselect,
+        Navigation,
     },
     props: {
         testCase: {
             type: String,
             default: '',
         },
+        main_ticket: {
+            type: String,
+            default: '',
+        },
+        currentTab: String,
     },
     setup(props) {
+        const isCreateLoading = ref(false);
+
         const caseSuite = ref([]);
         const manualTestCoverage = ref('Partial');
         const name = ref('');
@@ -101,70 +134,149 @@ export default defineComponent({
         const expectedResult = ref('');
         const manualTestEnvironment = ref('STAGE');
         const caseSource = ref('Defect');
-        const mainTicket = ref('');
+        const mainTicket = ref(props.main_ticket);
         const generatedBy = ref('gpt-3.5-turbo');
 
-        if (props.testCase.includes('\n\n')) {
-            name.value = props.testCase.split('\n\n')[0]?.split('Name: ')[1];
-            preCondition.value = props.testCase.split('\n\n')[1].split('Pre-Condition: ')[1];
-            testStep.value = props.testCase.split('\n\n')[2].split('Test Step:\n')[1];
-            expectedResult.value = props.testCase.split('\n\n')[3].split('Expected Result:\n')[1];
+
+        const taskUrl = ref<string | null>('');
+
+        interface TestCase {
+            name: string;
+            preCondition: string;
+            testStep: string;
+            expectedResult: string;
         }
 
-        const caseSuiteOptions = ['即檢及列印', '身分設定', 'SOAP', '下診斷ICD', '藥囑', '醫囑',
-            '歷史病歷', '稽核Rule', '報告查詢', '套餐(醫療)', '就診明細', '完成看診', '身體數據', '健保雲端',
-            '暫存及存回舊系統', '清空看診資料(病歷維護)', '健保卡及醫事卡', '病患清單', 'Login', 'CPOE',
-            '院內公告', '過敏及不良反應', '列印', '問卷', '轉診', 'LifeCycle', '環境設備',
-            '手術', '電子表單', '系統交互', '電子病歷', '疫苗', '偕同編輯', '掛號', 'DataSyc', '再次完成看診',
-            '癌症相關', '災難復原測試', '架構及技術', '個案管理', '批價帳務', '保險申報', '其他', 'UI'];
+        const selectedTestCase = ref<number>(0);
+        const testCases = ref<TestCase[]>([]);
 
-        const manualTestCoverageOptions = ['Smoke', 'Quick', 'Partial', 'Full',
-            'Backlog', 'DefectVerify', 'FectureVerify', 'E2E', 'Use Case', 'Offline'];
+        const inputText = props.testCase;
 
-        const manualTestEnvironmentOptions = ['INTT', 'STAGE', 'PROD', 'DEV'];
 
-        const caseSourceOptions = ['PRD', 'Defect', 'Testing', 'ETC', 'CR',
-            'E2E', 'Use Case', 'Acceptance Criteria']
+        onMounted(() => {
+            chrome.storage.local.get("taskUrl", (data) => {
+                if (data.taskUrl) {
+                    taskUrl.value = data.taskUrl;
+                } else {
+                    taskUrl.value = ''
+                }
+            });
 
-        const generatedByOptions = ['Human', 'gpt-3.5-turbo']
+            // load saved form data from chrome.storage.local on component mount
+            chrome.storage.local.get(["formData"], (result) => {
+                if (result.formData) {
+                    console.log("I am using formData");
+                    //const formData = result.formData || {};
+                    const formData = JSON.parse(result.formData) || {};
+                    name.value = formData.name;
+                    caseSuite.value = Array.isArray(formData.caseSuite) ? formData.caseSuite : [];
+                    manualTestCoverage.value = formData.manualTestCoverage;
+                    preCondition.value = formData.preCondition;
+                    testStep.value = formData.testStep;
+                    expectedResult.value = formData.expectedResult;
+                    manualTestEnvironment.value = formData.manualTestEnvironment;
+                    caseSource.value = formData.caseSource;
+                    mainTicket.value = formData.mainTicket || props.main_ticket;
+                    generatedBy.value = formData.generatedBy;
+                    getTestCase();
+                    if (preCondition.value == '') {
+                        // if no formData, extract test case to fill the test case related fields
+                        selectTestCase(0);
+                    }
+                } else {
 
-        // load saved form data from localStorage on component mount
-        const savedData = localStorage.getItem('formData');
-        if (savedData) {
-            const formData = JSON.parse(savedData);
+                }
 
-            name.value = formData.name;
-            caseSuite.value = formData.caseSuite;
-            manualTestCoverage.value = formData.manualTestCoverage;
-            preCondition.value = formData.preCondition;
-            testStep.value = formData.testStep;
-            expectedResult.value = formData.expectedResult;
-            manualTestEnvironment.value = formData.manualTestEnvironment;
-            caseSource.value = formData.caseSource;
-            mainTicket.value = formData.mainTicket;
-            generatedBy.value = formData.generatedBy;
+            });
+
+        });
+
+        function getTestCase() {
+            if (inputText.includes("Name:") || inputText.includes("Name：")) {
+                const splitText = inputText.split(/(?:Name[:：])/).slice(1);
+                if (splitText.length > 0) {
+                    testCases.value = splitText.map(testCaseText => {
+                        const preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
+                        const testStepSplit = preConditionSplit[1].split(/(?:Test Step[:：])/);
+                        const expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
+
+                        return {
+                            name: preConditionSplit[0].trim(),
+                            preCondition: testStepSplit[0].trim(),
+                            testStep: expectedResultSplit[0].trim(),
+                            expectedResult: expectedResultSplit[1].split(/(?:測試案例\d+[:：])/)[0].trim()
+                        };
+                    });
+                } else {
+                    // Handle the case when there's no match found
+                }
+            }
+        }
+
+        function selectTestCase(index: number) {
+            selectedTestCase.value = index;
+            const testCase = testCases.value[index];
+            if (testCase) {
+                name.value = testCase.name;
+                preCondition.value = testCase.preCondition;
+                testStep.value = testCase.testStep;
+                expectedResult.value = testCase.expectedResult;
+            }
+
         }
 
 
         function createTask() {
             // Implement the logic for creating a task using the form data
-            const formDataString = localStorage.getItem('formData');
-            if (formDataString) {
-                const formData = JSON.parse(formDataString);
-                console.log(formData);
-                axios.post('http://127.0.0.1:5000/create_task', formData)
-                    .then(response => {
-                        // Handle response from server
-                        // console.log(response.data);
-                    })
-                    .catch(error => {
-                        // Handle error
-                        console.log(error);
-                    });
-            } else {
-                console.error("No formData found in localStorage");
-            };
+            chrome.storage.local.get("formData", (data) => {
+                if (data.formData) {
+                    const formDataString = data.formData;
+                    console.log(formDataString);
+                    if (formDataString) {
+                        const formData = JSON.parse(formDataString);
+                        console.log(formData);
+                        isCreateLoading.value = true;
+                        axios.post('http://127.0.0.1:5000/create_task', formData)
+                            .then(response => {
+                                // Handle response from server
+                                console.log(response.data);
+                                if (response.data.task_url) {
+                                    taskUrl.value = response.data.task_url;
+                                    chrome.storage.local.set({ taskUrl: taskUrl.value });
+                                    isCreateLoading.value = false;
+                                } else {
+                                    console.log('no created task url')
+                                };
+                            })
+                            .catch(error => {
+                                // Handle error
+                                console.log(error);
+                            });
+                    } else {
+                        console.error("No formData found in localStorage");
+                    };
+                }
+            });
 
+        }
+        function clearLocalStorage() {
+            chrome.storage.local.remove('taskUrl')
+            chrome.storage.local.remove('formData')
+            taskUrl.value = null;
+            defaultValue();
+        }
+
+        function defaultValue() {
+            name.value = '';
+            caseSuite.value = [];
+            manualTestCoverage.value = 'Partial';
+            preCondition.value = '';
+            testStep.value = '';
+            expectedResult.value = '';
+            manualTestEnvironment.value = 'STAGE';
+            caseSource.value = 'Defect';
+            mainTicket.value = '';
+            generatedBy.value = 'gpt-3.5-turbo';
         }
 
         // Watch for changes to reactive properties and update formData real time
@@ -181,8 +293,13 @@ export default defineComponent({
                 mainTicket: mainTicket.value,
                 generatedBy: generatedBy.value,
             };
+            chrome.storage.local.set({ formData: JSON.stringify(updatedFormData) });
+            console.log('new data set');
+        });
 
-            localStorage.setItem('formData', JSON.stringify(updatedFormData));
+        // Watch the taskUrl property for changes and update localStorage
+        watch(taskUrl, (newValue) => {
+            chrome.storage.local.set({ taskUrl: newValue || '' });
         });
 
         return {
@@ -202,9 +319,16 @@ export default defineComponent({
             caseSourceOptions,
             generatedByOptions,
             createTask,
+            taskUrl,
+            clearLocalStorage,
+            selectedTestCase,
+            testCases,
+            selectTestCase,
+            isCreateLoading
         };
     }
 })
+
 </script>
 <style scoped>
 textarea {
@@ -219,6 +343,16 @@ input {
 
 .form-field {
     padding-bottom: 10px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.required-star {
+    color: red;
+    margin-left: 2px;
 }
 </style>
 <style src="@vueform/multiselect/themes/default.css"></style>

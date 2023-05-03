@@ -17,13 +17,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
                 const activeTab = tabs[0]
                 // send message to content script to generate test case
                 chrome.tabs.sendMessage(activeTab.id!, { action: "generateTestCase", prompt, defectDescription });
+                chrome.storage.local.set({ "isLoading": true });
             });
         });
     }
 });
 
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request: { action: string, testCase: string }) => {
     if (request.action === "showTestCase") {
         const gptGeneratedTestCase = request.testCase;
         async () => {

@@ -3,7 +3,7 @@
     "name": "GPT test case generator",
     "version": "1.0.0",    
     "description": "Generate test cases using GPT-3.5 Turbo",
-    "permissions": ["contextMenus", "tabs", "storage","activeTab"],
+    "permissions": ["contextMenus", "tabs", "storage","activeTab","notifications"],
     "host_permissions": ["http://localhost:5000/", "http://127.0.0.1:5000/"],
     "action": { 
       "default_popup": "index.html" ,
