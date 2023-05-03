@@ -33,11 +33,14 @@
                 <button @click="generate" class="generate-button">Generate</button>
             </div>
         </div>
-        <Form v-else :testCase="testCase" />
+        <Form v-else :testCase="testCase" :main_ticket="mainTicket"/>
     </div>
 </template>
   
 <script lang="ts">
+
+/// <reference types="chrome" />
+
 import Navigation from "./Navigation.vue";
 import Form from "./Form.vue";
 import { defineComponent, ref, onMounted, watch } from "vue";
@@ -59,6 +62,8 @@ export default defineComponent({
         const prompt = ref("我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述產出對應的測試案例，需要包含Name, Pre-Condition, Test Step, Expected Result ");
         const defectDescription = ref('');
         const testCase = ref("");
+        const mainTicket = ref("");
+
 
         function updateTestCase(testCaseData: string) {
             testCase.value = testCaseData;
@@ -118,13 +123,8 @@ export default defineComponent({
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const activeTab = tabs[0];
                 const url = activeTab.url;
-                chrome.storage.local.get(["formData"], (result) => {
-                    const formData = result.formData || { mainTicket: '' };
-                    formData.mainTicket = url;
-                    chrome.storage.local.set({ formData }, () => {
-                        console.log(`mainTicket set to ${url}`);
-                    });
-                });
+                mainTicket.value = url||"";
+                console.log(mainTicket.value)
             });
         }
 
@@ -155,6 +155,7 @@ export default defineComponent({
         return {
             currentTab,
             changeTab,
+            mainTicket,
             prompt, defectDescription, testCase, resetPrompt, generate, get_ticket
         };
     },

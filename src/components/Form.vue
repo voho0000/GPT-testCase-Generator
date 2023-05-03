@@ -1,5 +1,10 @@
 <template>
     <div id="task-form">
+        <div v-if="testCases.length > 1">
+            <button v-for="(test, index) in testCases" :key="index" @click="selectTestCase(index)">
+                Test Case {{ index + 1 }}
+            </button>
+        </div>
         <form>
             <div class="form-field">
                 <div>
@@ -19,7 +24,8 @@
                 <label for="manual-test-coverage">Manual Test Coverage:</label>
                 <select id="manual-test-coverage" v-model="manualTestCoverage">
                     <option disabled value="">Please select one</option>
-                    <option v-for="option in manualTestCoverageOptions" :key="option" :value="option">{{ option }}</option>
+                    <option v-for="option in manualTestCoverageOptions" :key="option" :value="option">{{ option }}
+                    </option>
                 </select>
             </div>
             <div class="form-field">
@@ -85,25 +91,35 @@
 </template>
   
 <script lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+/// <reference types="chrome" />
+
+
+import { defineComponent, ref, watch, onMounted } from 'vue';
 import Multiselect from '@vueform/multiselect'
 import axios from 'axios';
-import { toast } from 'vue-sonner';
-//import Toastify from 'toastify-js';
-import { useToast } from 'vue-toast-notification';
+import Navigation from "./Navigation.vue";
+import { caseSuiteOptions, manualTestCoverageOptions, manualTestEnvironmentOptions, caseSourceOptions, generatedByOptions } from './options';
+
 
 
 export default defineComponent({
     components: {
-        Multiselect
+        Multiselect,
+        Navigation,
     },
     props: {
         testCase: {
             type: String,
             default: '',
         },
+        main_ticket: {
+            type: String,
+            default: '',
+        },
+        currentTab: String,
     },
     setup(props) {
+
         const caseSuite = ref([]);
         const manualTestCoverage = ref('Partial');
         const name = ref('');
@@ -112,76 +128,151 @@ export default defineComponent({
         const expectedResult = ref('');
         const manualTestEnvironment = ref('STAGE');
         const caseSource = ref('Defect');
-        const mainTicket = ref('');
+        const mainTicket = ref(props.main_ticket);
         const generatedBy = ref('gpt-3.5-turbo');
 
-        const taskUrl = ref<string | null>(localStorage.getItem('taskUrl'));
+        const taskUrl = ref<string | null>('');
 
-        if (props.testCase.includes('\n\n')) {
-            name.value = props.testCase.split('\n\n')[0]?.split('Name: ')[1];
-            preCondition.value = props.testCase.split('\n\n')[1].split('Pre-Condition: ')[1];
-            testStep.value = props.testCase.split('\n\n')[2].split('Test Step:\n')[1];
-            expectedResult.value = props.testCase.split('\n\n')[3].split('Expected Result:\n')[1];
+
+
+        interface TestCase {
+            name: string;
+            preCondition: string;
+            testStep: string;
+            expectedResult: string;
         }
 
-        const caseSuiteOptions = ['即檢及列印', '身分設定', 'SOAP', '下診斷ICD', '藥囑', '醫囑',
-            '歷史病歷', '稽核Rule', '報告查詢', '套餐(醫療)', '就診明細', '完成看診', '身體數據', '健保雲端',
-            '暫存及存回舊系統', '清空看診資料(病歷維護)', '健保卡及醫事卡', '病患清單', 'Login', 'CPOE',
-            '院內公告', '過敏及不良反應', '列印', '問卷', '轉診', 'LifeCycle', '環境設備',
-            '手術', '電子表單', '系統交互', '電子病歷', '疫苗', '偕同編輯', '掛號', 'DataSyc', '再次完成看診',
-            '癌症相關', '災難復原測試', '架構及技術', '個案管理', '批價帳務', '保險申報', '其他', 'UI'];
+        const selectedTestCase = ref<number>(0);
+        const testCases = ref<TestCase[]>([]);
 
-        const manualTestCoverageOptions = ['Smoke', 'Quick', 'Partial', 'Full',
-            'Backlog', 'DefectVerify', 'FectureVerify', 'E2E', 'Use Case', 'Offline'];
+        const inputText = props.testCase;
 
-        const manualTestEnvironmentOptions = ['INTT', 'STAGE', 'PROD', 'DEV'];
 
-        const caseSourceOptions = ['PRD', 'Defect', 'Testing', 'ETC', 'CR',
-            'E2E', 'Use Case', 'Acceptance Criteria']
+        onMounted(() => {
+            chrome.storage.local.get("taskUrl", (data) => {
+                if (data.taskUrl) {
+                    taskUrl.value = data.taskUrl;
+                } else {
+                    taskUrl.value = ''
+                }
+            });
 
-        const generatedByOptions = ['Human', 'gpt-3.5-turbo']
+            // load saved form data from chrome.storage.local on component mount
+            chrome.storage.local.get(["formData"], (result) => {
+                if (result.formData) {
+                    console.log("I am using formData");
+                    const formData = result.formData || {};
+                    name.value = formData.name;
+                    caseSuite.value = Array.isArray(formData.caseSuite) ? formData.caseSuite : []; // Ensure caseSuite.value is always an arrayv
+                    manualTestCoverage.value = formData.manualTestCoverage;
+                    preCondition.value = formData.preCondition;
+                    testStep.value = formData.testStep;
+                    expectedResult.value = formData.expectedResult;
+                    manualTestEnvironment.value = formData.manualTestEnvironment;
+                    caseSource.value = formData.caseSource;
+                    mainTicket.value = formData.mainTicket; // use chrome.storage.local to get mainTicket value
+                    generatedBy.value = formData.generatedBy;
+                    getTestCase();
+                    if (preCondition.value == '') {
+                        // if no formData, extract test case to fill the test case related fields
+                        selectTestCase(0);
+                    }
+                } else {
 
-        // load saved form data from chrome.storage.local on component mount
-        chrome.storage.local.get(["formData"], (result) => {
-            const formData = result.formData || {};
-            name.value = formData.name;
-            caseSuite.value = formData.caseSuite;
-            manualTestCoverage.value = formData.manualTestCoverage;
-            preCondition.value = formData.preCondition;
-            testStep.value = formData.testStep;
-            expectedResult.value = formData.expectedResult;
-            manualTestEnvironment.value = formData.manualTestEnvironment;
-            caseSource.value = formData.caseSource;
-            mainTicket.value = formData.mainTicket || ""; // use chrome.storage.local to get mainTicket value
-            generatedBy.value = formData.generatedBy;
+                }
+
+            });
+
         });
+
+        function getTestCase() {
+            if (inputText.includes("Name:") || inputText.includes("Name：")) {
+                const splitText = inputText.split(/(?:Name[:：])/).slice(1);
+                if (splitText.length > 0) {
+                    testCases.value = splitText.map(testCaseText => {
+                        const preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
+                        const testStepSplit = preConditionSplit[1].split(/(?:Test Step[:：])/);
+                        const expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
+
+                        return {
+                            name: preConditionSplit[0].trim(),
+                            preCondition: testStepSplit[0].trim(),
+                            testStep: expectedResultSplit[0].trim(),
+                            expectedResult: expectedResultSplit[1].split(/(?:測試案例\d+[:：])/)[0].trim()
+                        };
+                    });
+                    console.log(testCases)
+                } else {
+                    // Handle the case when there's no match found
+                }
+            }
+        }
+
+        function selectTestCase(index: number) {
+            console.log('selected test case')
+            selectedTestCase.value = index;
+            const testCase = testCases.value[index];
+            if (testCase) {
+                name.value = testCase.name;
+                preCondition.value = testCase.preCondition;
+                testStep.value = testCase.testStep;
+                expectedResult.value = testCase.expectedResult;
+            }
+
+        }
+
+
+
 
 
         function createTask() {
             // Implement the logic for creating a task using the form data
-            const formDataString = localStorage.getItem('formData');
-            if (formDataString) {
-                const formData = JSON.parse(formDataString);
-                console.log(formData);
-                axios.post('http://127.0.0.1:5000/create_task', formData)
-                    .then(response => {
-                        // Handle response from server
-                        console.log(response.data);
-                        taskUrl.value = response.data.task_url;
-                        localStorage.setItem('taskUrl', taskUrl.value!);
-                    })
-                    .catch(error => {
-                        // Handle error
-                        console.log(error);
-                    });
-            } else {
-                console.error("No formData found in localStorage");
-            };
+            chrome.storage.local.get("formData", (data) => {
+                if (data.formData) {
+                    const formDataString = data.formData;
+                    if (formDataString) {
+                        const formData = JSON.parse(formDataString);
+                        console.log(formData);
+                        axios.post('http://127.0.0.1:5000/create_task', formData)
+                            .then(response => {
+                                // Handle response from server
+                                console.log(response.data);
+                                if (response.data.task_url) {
+                                    taskUrl.value = response.data.task_url;
+                                    chrome.storage.local.set({ taskUrl: taskUrl.value });
+                                } else {
+                                    console.log('no created task url')
+                                };
+                            })
+                            .catch(error => {
+                                // Handle error
+                                console.log(error);
+                            });
+                    } else {
+                        console.error("No formData found in localStorage");
+                    };
+                }
+            });
 
         }
         function clearLocalStorage() {
-            localStorage.removeItem('taskUrl');
+            chrome.storage.local.remove('taskUrl')
+            chrome.storage.local.remove('formData')
             taskUrl.value = null;
+            defaultValue();
+        }
+
+        function defaultValue() {
+            name.value = '';
+            caseSuite.value = [];
+            manualTestCoverage.value = 'Partial';
+            preCondition.value = '';
+            testStep.value = '';
+            expectedResult.value = '';
+            manualTestEnvironment.value = 'STAGE';
+            caseSource.value = 'Defect';
+            mainTicket.value = '';
+            generatedBy.value = 'gpt-3.5-turbo';
         }
 
         // Watch for changes to reactive properties and update formData real time
@@ -198,14 +289,13 @@ export default defineComponent({
                 mainTicket: mainTicket.value,
                 generatedBy: generatedBy.value,
             };
-
-            chrome.storage.local.set({ formData: updatedFormData });
-
+            chrome.storage.local.set({ formData: updatedFormData, test: 'test' });
+            console.log('new data set');
         });
 
         // Watch the taskUrl property for changes and update localStorage
         watch(taskUrl, (newValue) => {
-            localStorage.setItem('taskUrl', newValue || '');
+            chrome.storage.local.set({ taskUrl: newValue || '' });
         });
 
         return {
@@ -227,9 +317,13 @@ export default defineComponent({
             createTask,
             taskUrl,
             clearLocalStorage,
+            selectedTestCase,
+            testCases,
+            selectTestCase,
         };
     }
 })
+
 </script>
 <style scoped>
 textarea {
