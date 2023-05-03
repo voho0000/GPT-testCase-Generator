@@ -17,6 +17,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
                 const activeTab = tabs[0]
                 // send message to content script to generate test case
                 chrome.tabs.sendMessage(activeTab.id!, { action: "generateTestCase", prompt, defectDescription });
+                chrome.storage.local.set({ "isLoading": true });
             });
         });
     }
