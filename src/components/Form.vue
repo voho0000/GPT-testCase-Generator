@@ -5,24 +5,24 @@
                 Test Case {{ index + 1 }}
             </button>
         </div>
-        <form>
+        <form  @submit.prevent="createTask">
             <div class="form-field">
                 <div>
-                    <label for="name">Name:</label>
+                    <label for="name">Name:<span class="required-star">*</span></label>
                 </div>
                 <div>
-                    <textarea id="name" v-model="name"></textarea>
+                    <textarea id="name" v-model="name" required></textarea>
                 </div>
             </div>
             <div class="form-field">
-                <label for="case-suite">Case Suite:</label>
-                <Multiselect v-model="caseSuite" mode="tags" placeholder="Select options" :searchable="true"
+                <label for="case-suite">Case Suite:<span class="required-star">*</span></label>
+                <Multiselect v-model="caseSuite" required mode="tags" placeholder="Select options" :searchable="true"
                     :close-on-select="false" :options="caseSuiteOptions" />
 
             </div>
             <div class="form-field">
-                <label for="manual-test-coverage">Manual Test Coverage:</label>
-                <select id="manual-test-coverage" v-model="manualTestCoverage">
+                <label for="manual-test-coverage">Manual Test Coverage: <span class="required-star">*</span></label>
+                <select id="manual-test-coverage" v-model="manualTestCoverage" required>
                     <option disabled value="">Please select one</option>
                     <option v-for="option in manualTestCoverageOptions" :key="option" :value="option">{{ option }}
                     </option>
@@ -38,18 +38,18 @@
             </div>
             <div class="form-field">
                 <div>
-                    <label for="test-step">Test Step:</label>
+                    <label for="test-step">Test Step:<span class="required-star">*</span></label>
                 </div>
                 <div>
-                    <textarea id="test-step" v-model="testStep" rows="7"></textarea>
+                    <textarea id="test-step" v-model="testStep" rows="7" required></textarea>
                 </div>
             </div>
             <div class="form-field">
                 <div>
-                    <label for="expected-result">Expected Result:</label>
+                    <label for="expected-result">Expected Result:<span class="required-star">*</span></label>
                 </div>
                 <div>
-                    <textarea id="expected-result" v-model="expectedResult" rows="7"></textarea>
+                    <textarea id="expected-result" v-model="expectedResult" rows="7" required></textarea>
                 </div>
             </div>
             <div class="form-field">
@@ -68,7 +68,7 @@
                 </select>
             </div>
             <div class="form-field">
-                <label for="main-ticket">Main Ticket:</label>
+                <label for="main-ticket">Main Ticket: </label>
                 <input id="main-ticket" type="url" v-model="mainTicket" placeholder="asana defect task url" />
             </div>
             <div class="form-field">
@@ -80,7 +80,7 @@
             </div>
             <div class="button-container">
                 <button type="button" @click="clearLocalStorage">Clear</button>
-                <button type="button" @click="createTask">Create</button>
+                <button type="submit">Create</button>
             </div>
             <div>
                 <label for="taskUrl">Created Task URL:</label>
@@ -131,9 +131,8 @@ export default defineComponent({
         const mainTicket = ref(props.main_ticket);
         const generatedBy = ref('gpt-3.5-turbo');
 
+
         const taskUrl = ref<string | null>('');
-
-
 
         interface TestCase {
             name: string;
@@ -161,16 +160,17 @@ export default defineComponent({
             chrome.storage.local.get(["formData"], (result) => {
                 if (result.formData) {
                     console.log("I am using formData");
-                    const formData = result.formData || {};
+                    //const formData = result.formData || {};
+                    const formData = JSON.parse(result.formData) || {};
                     name.value = formData.name;
-                    caseSuite.value = Array.isArray(formData.caseSuite) ? formData.caseSuite : []; // Ensure caseSuite.value is always an arrayv
+                    caseSuite.value = Array.isArray(formData.caseSuite) ? formData.caseSuite : [];
                     manualTestCoverage.value = formData.manualTestCoverage;
                     preCondition.value = formData.preCondition;
                     testStep.value = formData.testStep;
                     expectedResult.value = formData.expectedResult;
                     manualTestEnvironment.value = formData.manualTestEnvironment;
                     caseSource.value = formData.caseSource;
-                    mainTicket.value = formData.mainTicket; // use chrome.storage.local to get mainTicket value
+                    mainTicket.value = formData.mainTicket || props.main_ticket;
                     generatedBy.value = formData.generatedBy;
                     getTestCase();
                     if (preCondition.value == '') {
@@ -201,7 +201,6 @@ export default defineComponent({
                             expectedResult: expectedResultSplit[1].split(/(?:測試案例\d+[:：])/)[0].trim()
                         };
                     });
-                    console.log(testCases)
                 } else {
                     // Handle the case when there's no match found
                 }
@@ -209,7 +208,6 @@ export default defineComponent({
         }
 
         function selectTestCase(index: number) {
-            console.log('selected test case')
             selectedTestCase.value = index;
             const testCase = testCases.value[index];
             if (testCase) {
@@ -222,14 +220,12 @@ export default defineComponent({
         }
 
 
-
-
-
         function createTask() {
             // Implement the logic for creating a task using the form data
             chrome.storage.local.get("formData", (data) => {
                 if (data.formData) {
                     const formDataString = data.formData;
+                    console.log(formDataString);
                     if (formDataString) {
                         const formData = JSON.parse(formDataString);
                         console.log(formData);
@@ -289,7 +285,7 @@ export default defineComponent({
                 mainTicket: mainTicket.value,
                 generatedBy: generatedBy.value,
             };
-            chrome.storage.local.set({ formData: updatedFormData, test: 'test' });
+            chrome.storage.local.set({ formData: JSON.stringify(updatedFormData)});
             console.log('new data set');
         });
 
@@ -343,6 +339,11 @@ input {
 .button-container {
     display: flex;
     justify-content: space-between;
+}
+
+.required-star {
+    color: red;
+    margin-left: 2px;
 }
 </style>
 <style src="@vueform/multiselect/themes/default.css"></style>

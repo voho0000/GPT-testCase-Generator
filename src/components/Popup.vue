@@ -33,7 +33,7 @@
                 <button @click="generate" class="generate-button">Generate</button>
             </div>
         </div>
-        <Form v-else :testCase="testCase" :main_ticket="mainTicket"/>
+        <Form v-else :testCase="testCase" :main_ticket="mainTicket" />
     </div>
 </template>
   
@@ -44,6 +44,8 @@
 import Navigation from "./Navigation.vue";
 import Form from "./Form.vue";
 import { defineComponent, ref, onMounted, watch } from "vue";
+import axios from 'axios';
+
 
 export default defineComponent({
     components: {
@@ -118,14 +120,49 @@ export default defineComponent({
             });
         }
 
+        function extractTaskId(url: string): string | null {
+            // Regular expression to match either pattern
+            const taskIdRegex = /(?:child=|\/0\/\d+\/)(\d+)/;
+            const match = url.match(taskIdRegex);
+
+            if (match && match[1]) {
+                return match[1];
+            } else {
+                return null;
+            }
+        }
+
+
         function get_ticket() {
             console.log("get ticket hit!")
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const activeTab = tabs[0];
                 const url = activeTab.url;
-                mainTicket.value = url||"";
-                console.log(mainTicket.value)
+                mainTicket.value = url || "";
+                chrome.storage.local.set({ "mainTicket": mainTicket.value });
+                const taskGid = extractTaskId(mainTicket.value);
+                const asanaApiKey = import.meta.env.VITE_ASANA_API_KEY;
+                axios.get(`https://app.asana.com/api/1.0/tasks/${taskGid}`, {
+                    headers: {
+                        'Authorization': `Bearer ${asanaApiKey}`,
+                    },
+                })
+                    .then(response => {
+                        const task = response.data.data;
+                        const permanentLink = task.permalink_url;
+                        const taskDescription = task.notes;
+                        mainTicket.value = permanentLink;
+                        if (!defectDescription.value || defectDescription.value.trim() === '') {
+                            defectDescription.value = taskDescription;
+                        }
+                    })
+                    .catch(error => {
+                        console.log(error);
+                    });
+
             });
+
+
         }
 
 
