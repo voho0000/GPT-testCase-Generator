@@ -25,7 +25,7 @@ def generate_test_case():
     defect_description = request.json['defectDescription']
 
     # Combine prompt and defect_description
-    full_prompt = f"{prompt} {defect_description}"
+    full_prompt = f"{prompt} *** {defect_description} ***"
 
     print(full_prompt)
 
@@ -36,8 +36,8 @@ def generate_test_case():
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": full_prompt}
         ],
-        "max_tokens": 2000,
-        "temperature": 0.5
+        "max_tokens": 3000,
+        "temperature": 0
     }
 
     headers = {

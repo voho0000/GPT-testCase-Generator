@@ -85,7 +85,6 @@ export default defineComponent({
                     updateTestCase(request.testCase!);
                     // Set isLoading to false and save it in localStorage
                     isLoading.value = false;
-                    chrome.storage.local.set({ "isLoading": false });
                 }
             });
 
@@ -142,7 +141,9 @@ export default defineComponent({
             chrome.storage.local.remove('prompt');
             chrome.storage.local.remove('defectDescription');
             chrome.storage.local.remove('testCase');
+            chrome.storage.local.set({ "isLoading": false });
             defaultValue();
+            isLoading.value = false;
         }
 
         function defaultValue() {
