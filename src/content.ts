@@ -13,6 +13,7 @@ chrome.runtime.onMessage.addListener(
         .then((response) => response.json())
         .then((data) => {
           chrome.storage.local.set({ "testCase": data.test_steps });
+          chrome.storage.local.set({ "isLoading": false });
           // Send a message to the background script to update the popup
           chrome.runtime.sendMessage({
             action: "testCaseGenerated",

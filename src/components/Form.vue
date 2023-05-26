@@ -1,7 +1,8 @@
 <template>
     <div id="task-form">
         <div v-if="testCases.length > 1">
-            <button v-for="(test, index) in testCases" :key="index" @click="selectTestCase(index)">
+            <button v-for="(test, index) in testCases" :key="index" @click="selectTestCase(index)"
+                :class="{ 'active-button': index === selectedTestCase, 'test-case-button': true }">
                 Test Case {{ index + 1 }}
             </button>
         </div>
@@ -353,6 +354,19 @@ input {
 .required-star {
     color: red;
     margin-left: 2px;
+}
+
+.active-button {
+    /* Set your desired color for the active button */
+    background-color: #007bff;
+    /* Change this to your desired color */
+    color: white;
+    /* Change this to your desired text color */
+}
+
+.test-case-button {
+    margin-top: 10px;
+    /* Change this value as per your needs */
 }
 </style>
 <style src="@vueform/multiselect/themes/default.css"></style>
