@@ -3,6 +3,7 @@ chrome.runtime.onMessage.addListener(
     if (request.action === "generateTestCase") {
       const prompt = request.prompt;
       const defectDescription = request.defectDescription;
+      //https://35.212.234.39:5000
       fetch("http://127.0.0.1:5000/generate_test_case", {
         method: "POST",
         headers: {

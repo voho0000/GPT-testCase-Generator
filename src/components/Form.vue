@@ -237,6 +237,7 @@ export default defineComponent({
                         const formData = JSON.parse(formDataString);
                         console.log(formData);
                         isCreateLoading.value = true;
+                        chrome.storage.local.set({ "isCreateLoading": true });
                         axios.post('http://127.0.0.1:5000/create_task', formData)
                             .then(response => {
                                 // Handle response from server
@@ -245,6 +246,7 @@ export default defineComponent({
                                     taskUrl.value = response.data.task_url;
                                     chrome.storage.local.set({ taskUrl: taskUrl.value });
                                     isCreateLoading.value = false;
+                                    chrome.storage.local.set({ "isCreateLoading": false });
                                 } else {
                                     console.log('no created task url')
                                 };
@@ -263,6 +265,7 @@ export default defineComponent({
         function clearLocalStorage() {
             chrome.storage.local.remove('taskUrl')
             chrome.storage.local.remove('formData')
+            chrome.storage.local.set({ "isCreateLoading": false });
             taskUrl.value = null;
             defaultValue();
         }
@@ -278,6 +281,7 @@ export default defineComponent({
             caseSource.value = 'Defect';
             mainTicket.value = '';
             generatedBy.value = 'gpt-3.5-turbo';
+            isCreateLoading.value = false;
         }
 
         // Watch for changes to reactive properties and update formData real time

@@ -9,7 +9,7 @@
                     <button @click="resetPrompt">Reset</button>
                 </div>
                 <div>
-                    <textarea v-model="prompt" class="textarea" rows="5"></textarea>
+                    <textarea v-model="prompt" class="textarea" rows="6"></textarea>
                 </div>
             </div>
             <div>
@@ -68,7 +68,7 @@ export default defineComponent({
         }
 
 
-        const defaultPrompt = "我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述來產出之後在進行手動測試時能涵蓋到此缺陷測試的測試案例，需去除使用者的可識別資訊，預期結果為正常結果，產生的測試案例需要包含Name, Pre-Condition, Test Step, Expected Result ";
+        const defaultPrompt = "我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述來產出之後在進行手動測試時能涵蓋到此缺陷測試的測試案例，需去除使用者的可識別資訊，預期結果為正常結果，若有附上PRD，還需要增加能涵蓋PRD的使用情境的測試案例，若無附上則不用，產生的測試案例需要包含Name, Pre-Condition, Test Step, Expected Result ";
         const prompt = ref(defaultPrompt);
         const defectDescription = ref('');
         const testCase = ref("");
@@ -142,14 +142,14 @@ export default defineComponent({
             chrome.storage.local.remove('defectDescription');
             chrome.storage.local.remove('testCase');
             chrome.storage.local.set({ "isLoading": false });
-            defaultValue();
-            isLoading.value = false;
+            defaultValue();   
         }
 
         function defaultValue() {
             prompt.value = '';
             defectDescription.value = '';
             testCase.value = '';
+            isLoading.value = false;
         }
 
         function extractTaskId(url: string): string | null {

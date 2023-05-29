@@ -11,6 +11,7 @@ import re
 # Load the .env file located in the project directory
 load_dotenv()
 AZURE_API_KEY = os.getenv('AZURE_API_KEY')
+ASANA_API_KEY = os.getenv('ASANA_API_KEY')
 project_gid = '1203880491753826'  # master script
 
 
@@ -57,9 +58,9 @@ def generate_test_case():
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": full_prompt}
         ],
-        temperature=0,
+        temperature=0, # to make the output to be deterministic
         max_tokens=3000,
-        #top_p=1,
+        #top_p=1, 
         #frequency_penalty=0,
         #presence_penalty=0,
         #stop=None
