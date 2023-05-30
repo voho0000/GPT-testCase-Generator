@@ -1,3 +1,4 @@
+/*
 chrome.runtime.onMessage.addListener(
   (request: { action: string, prompt: string, defectDescription: string }, sender: any, sendResponse: any) => {
     if (request.action === "generateTestCase") {
@@ -27,3 +28,4 @@ chrome.runtime.onMessage.addListener(
     }
   }
 );
+*/

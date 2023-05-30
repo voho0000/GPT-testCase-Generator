@@ -1,3 +1,5 @@
+/*
+const OPENAI_API_KEY = 'your_openai_api_key_here';
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
         id: "generateTestCase",
@@ -5,6 +7,7 @@ chrome.runtime.onInstalled.addListener(() => {
         contexts: ["selection"],
     });
 });
+  
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "generateTestCase" && info.selectionText) {
@@ -33,3 +36,4 @@ chrome.runtime.onMessage.addListener((request: { action: string, testCase: strin
         }
     }
 });
+*/
