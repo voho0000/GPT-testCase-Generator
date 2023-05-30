@@ -75,19 +75,8 @@ export default defineComponent({
         const mainTicket = ref("");
 
 
-        function updateTestCase(testCaseData: string) {
-            testCase.value = testCaseData;
-        }
 
         onMounted(() => {
-            chrome.runtime.onMessage.addListener((request: { action: string; testCase: string }, sender: any, sendResponse: any) => {
-                if (request.action === "testCaseGenerated") {
-                    updateTestCase(request.testCase!);
-                    // Set isLoading to false and save it in localStorage
-                    isLoading.value = false;
-                }
-            });
-
             // Read isLoading from localStorage and update the value of isLoading
             chrome.storage.local.get(["isLoading"], (data) => {
                 isLoading.value = data.isLoading || false;
@@ -123,26 +112,87 @@ export default defineComponent({
             chrome.storage.local.set({ "prompt": defaultPrompt });
         }
 
+
+
         function generate() {
-            // Send a message to the content script with the prompt and defect description
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                const activeTab = tabs[0];
-                chrome.tabs.sendMessage(activeTab.id!, {
-                    action: "generateTestCase",
-                    prompt: prompt.value,
-                    defectDescription: defectDescription.value,
-                });
-                isLoading.value = true;
-                chrome.storage.local.set({ "isLoading": true });
-            });
+            isLoading.value = true;
+            chrome.storage.local.set({ "isLoading": true });
+
+            // Combine prompt and defectDescription
+            const full_prompt = `${prompt.value || ''} *** ${defectDescription.value || ''} ***`;
+            // Define whether to use GPT4
+            const useGPT4 = true;
+
+            let data;
+            let headers;
+            let apiKey;
+            const max_tokens = 3000;
+            const temperature = 0;
+
+            if (useGPT4) {
+                apiKey = import.meta.env.VITE_AZURE_API_KEY;
+                data = {
+                    "messages": [
+                        { "role": "system", "content": "You are a helpful assistant." },
+                        { "role": "user", "content": full_prompt }
+                    ],
+                    "max_tokens": max_tokens,
+                    "temperature": temperature
+                };
+                headers = {
+                    'Content-Type': 'application/json',
+                    'api-key': apiKey
+                };
+                axios.post("https://user1-create-gpt.openai.azure.com/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
+                    data, { headers })
+                    .then(response => {
+                        const test_steps = response.data['choices'][0]['message']['content'].trim();
+                        console.log(response);
+                        chrome.storage.local.set({ "testCase": test_steps });
+                        chrome.storage.local.set({ "isLoading": false });
+                        testCase.value = test_steps;
+                        isLoading.value = false;
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching test case:", error);
+                    });
+            } else {
+                apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+                data = {
+                    "model": "gpt-3.5-turbo",
+                    "messages": [
+                        { "role": "system", "content": "You are a helpful assistant." },
+                        { "role": "user", "content": full_prompt }
+                    ],
+                    "max_tokens": max_tokens,
+                    "temperature": temperature
+                };
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                };
+                axios.post("https://api.openai.com/v1/chat/completions", data, { headers })
+                    .then(response => {
+                        const test_steps = response.data['choices'][0]['message']['content'].trim();
+                        console.log(response);
+                        chrome.storage.local.set({ "testCase": test_steps });
+                        chrome.storage.local.set({ "isLoading": false });
+                        testCase.value = test_steps;
+                        isLoading.value = false;
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching test case:", error);
+                    });
+            }
         }
+
 
         function clearLocalStorage() {
             chrome.storage.local.remove('prompt');
             chrome.storage.local.remove('defectDescription');
             chrome.storage.local.remove('testCase');
             chrome.storage.local.set({ "isLoading": false });
-            defaultValue();   
+            defaultValue();
         }
 
         function defaultValue() {
