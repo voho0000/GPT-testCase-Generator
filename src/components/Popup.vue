@@ -126,8 +126,9 @@ export default defineComponent({
             let data;
             let headers;
             let apiKey;
-            const max_tokens = 3000;
-            const temperature = 0;
+            const max_tokens = 4000;
+            console.log(max_tokens);
+            const temperature = 0.5;
 
             if (useGPT4) {
                 apiKey = import.meta.env.VITE_AZURE_API_KEY;

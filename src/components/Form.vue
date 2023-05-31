@@ -105,7 +105,7 @@ import Multiselect from '@vueform/multiselect'
 import axios from 'axios';
 import Navigation from "./Navigation.vue";
 import { caseSuiteOptions, manualTestCoverageOptions, manualTestEnvironmentOptions, caseSourceOptions, generatedByOptions } from './options';
-
+import { createAsanaTask } from './AsanaField';
 
 
 export default defineComponent({
@@ -194,13 +194,14 @@ export default defineComponent({
 
         function getTestCase() {
             if (inputText.includes("Name:") || inputText.includes("Name：")) {
-                const splitText = inputText.split(/(?:Name[:：])/).slice(1);
+                //const splitText = inputText.split(/(?:Name[:：])/).slice(1);
+                const splitText = inputText.split(/(?:\d+\.\s)?(?:Name[:：])/).slice(1);
+                console.log(splitText);
                 if (splitText.length > 0) {
                     testCases.value = splitText.map(testCaseText => {
                         const preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
                         const testStepSplit = preConditionSplit[1].split(/(?:Test Step[:：])/);
                         const expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
-
                         return {
                             name: preConditionSplit[0].trim(),
                             preCondition: testStepSplit[0].trim(),
@@ -232,24 +233,20 @@ export default defineComponent({
             chrome.storage.local.get("formData", (data) => {
                 if (data.formData) {
                     const formDataString = data.formData;
-                    console.log(formDataString);
                     if (formDataString) {
                         const formData = JSON.parse(formDataString);
                         console.log(formData);
                         isCreateLoading.value = true;
                         chrome.storage.local.set({ "isCreateLoading": true });
-                        axios.post('http://127.0.0.1:5000/create_task', formData)
-                            .then(response => {
-                                // Handle response from server
-                                console.log(response.data);
-                                if (response.data.task_url) {
-                                    taskUrl.value = response.data.task_url;
-                                    chrome.storage.local.set({ taskUrl: taskUrl.value });
-                                    isCreateLoading.value = false;
-                                    chrome.storage.local.set({ "isCreateLoading": false });
-                                } else {
-                                    console.log('no created task url')
-                                };
+                        const projectGid = '1203880491753826';  //master script
+                        const asanaApiKey = import.meta.env.VITE_ASANA_API_KEY;
+                        createAsanaTask(formData, projectGid, asanaApiKey)
+                            .then(task_url => {
+                                console.log(task_url);
+                                taskUrl.value = task_url.task_url;
+                                chrome.storage.local.set({ taskUrl: taskUrl.value });
+                                isCreateLoading.value = false;
+                                chrome.storage.local.set({ "isCreateLoading": false });
                             })
                             .catch(error => {
                                 // Handle error
