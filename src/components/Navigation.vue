@@ -4,6 +4,8 @@
             <li :class="{ active: currentTab === 'Popup' }" @click="$emit('change-tab', 'Popup')">Test Case</li>
             <li :class="{ active: currentTab === 'PopupTaskForm' }" @click="$emit('change-tab', 'PopupTaskForm')">Task Form
             </li>
+            <li :class="{ active: currentTab === 'Prompt' }" @click="$emit('change-tab', 'Prompt')">Prompt
+            </li>
         </ul>
     </nav>
 </template>

@@ -4,24 +4,34 @@
         <Navigation :current-tab="currentTab" @change-tab="changeTab" />
         <div v-if="currentTab === 'Popup'">
             <div>
-                <div>
-                    <label>Prompt:</label>
-                    <button @click="resetPrompt">Reset</button>
+                <div class="button-select-container">
+                    <div class="item-container">
+                        <label>Prompt:</label>
+                    </div>
+                    <div class="button-container">
+                        <button @click="resetPrompt" class="reset-button">Reset</button>
+                        <select v-model="selectedTemplate" @change="applyTemplate" class="template-select">
+                            <option value="">Prompt</option>
+                            <option v-for="template in promptTemplates" :key="template.id" :value="template.id.toString()">
+                                {{ template.name }}
+                            </option>
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <textarea v-model="prompt" class="textarea" rows="6"></textarea>
                 </div>
             </div>
             <div>
-                <div>
-                    <label>Defect Description:</label>
+                <div class="item-container">
+                    <label >Defect Description:</label>
                 </div>
                 <div>
                     <textarea v-model="defectDescription" class="textarea" rows="8"></textarea>
                 </div>
             </div>
             <div>
-                <div>
+                <div class="item-container">
                     <label>Generated Test Case:</label>
                 </div>
                 <div>
@@ -39,7 +49,8 @@
                 <button @click="generate" :disabled="isLoading">Generate</button>
             </div>
         </div>
-        <Form v-else :testCase="testCase" :main_ticket="mainTicket" />
+        <Form v-else-if="currentTab === 'PopupTaskForm'" :testCase="testCase" :main_ticket="mainTicket" />
+        <Prompt v-else-if="currentTab === 'Prompt'" />
     </div>
 </template>
   
@@ -49,14 +60,21 @@
 
 import Navigation from "./Navigation.vue";
 import Form from "./Form.vue";
+import Prompt from "./Prompt.vue";
 import { defineComponent, ref, onMounted, watch } from "vue";
 import axios from 'axios';
 
+interface Template {
+    id: number;
+    name: string;
+    content: string;
+}
 
 export default defineComponent({
     components: {
         Navigation,
         Form,
+        Prompt,
     },
     setup() {
         const isLoading = ref(false);
@@ -65,6 +83,11 @@ export default defineComponent({
 
         function changeTab(newTab: string) {
             currentTab.value = newTab;
+            chrome.storage.sync.get(["templates"], (data) => {
+                if (data.templates) {
+                    promptTemplates.value = Object.values(data.templates);
+                }
+            });
         }
 
 
@@ -73,16 +96,18 @@ export default defineComponent({
         const defectDescription = ref('');
         const testCase = ref("");
         const mainTicket = ref("");
+        const selectedTemplate = ref<string>("");
+        const promptTemplates = ref<Template[]>([]);
 
 
 
         onMounted(() => {
             // Read isLoading from localStorage and update the value of isLoading
-            chrome.storage.local.get(["isLoading"], (data) => {
+            chrome.storage.sync.get(["isLoading"], (data) => {
                 isLoading.value = data.isLoading || false;
             });
 
-            chrome.storage.local.get("prompt", (data) => {
+            chrome.storage.sync.get("prompt", (data) => {
                 if (data.prompt) {
                     prompt.value = data.prompt;
                 } else {
@@ -90,7 +115,7 @@ export default defineComponent({
                 }
             });
 
-            chrome.storage.local.get("defectDescription", (data) => {
+            chrome.storage.sync.get("defectDescription", (data) => {
                 if (data.defectDescription) {
                     defectDescription.value = data.defectDescription;
                 } else {
@@ -98,25 +123,40 @@ export default defineComponent({
                 }
             });
 
-            chrome.storage.local.get("testCase", (data) => {
+            chrome.storage.sync.get("testCase", (data) => {
                 if (data.testCase) {
                     testCase.value = data.testCase;
                 } else {
                     testCase.value = ''
                 }
             });
+
+            chrome.storage.sync.get(["templates"], (data) => {
+                if (data.templates) {
+                    promptTemplates.value = Object.values(data.templates);
+                }
+            });
+
         });
+
+        function applyTemplate() {
+            const template = promptTemplates.value.find(t => t.id.toString() === selectedTemplate.value);
+            if (template) {
+                prompt.value = template.content;
+            }
+        };
 
         function resetPrompt() {
             prompt.value = defaultPrompt;
-            chrome.storage.local.set({ "prompt": defaultPrompt });
+            selectedTemplate.value = "";
+            chrome.storage.sync.set({ "prompt": defaultPrompt });
         }
 
 
 
         function generate() {
             isLoading.value = true;
-            chrome.storage.local.set({ "isLoading": true });
+            chrome.storage.sync.set({ "isLoading": true });
 
             // Combine prompt and defectDescription
             const full_prompt = `${prompt.value || ''} *** ${defectDescription.value || ''} ***`;
@@ -126,7 +166,7 @@ export default defineComponent({
             let data;
             let headers;
             let apiKey;
-            const max_tokens = 4000;
+            const max_tokens = 2000;
             console.log(max_tokens);
             const temperature = 0.5;
 
@@ -149,8 +189,8 @@ export default defineComponent({
                     .then(response => {
                         const test_steps = response.data['choices'][0]['message']['content'].trim();
                         console.log(response);
-                        chrome.storage.local.set({ "testCase": test_steps });
-                        chrome.storage.local.set({ "isLoading": false });
+                        chrome.storage.sync.set({ "testCase": test_steps });
+                        chrome.storage.sync.set({ "isLoading": false });
                         testCase.value = test_steps;
                         isLoading.value = false;
                     })
@@ -176,23 +216,31 @@ export default defineComponent({
                     .then(response => {
                         const test_steps = response.data['choices'][0]['message']['content'].trim();
                         console.log(response);
-                        chrome.storage.local.set({ "testCase": test_steps });
-                        chrome.storage.local.set({ "isLoading": false });
+                        chrome.storage.sync.set({ "testCase": test_steps });
+                        chrome.storage.sync.set({ "isLoading": false });
                         testCase.value = test_steps;
                         isLoading.value = false;
+                        console.log(isLoading.value);
                     })
                     .catch((error) => {
                         console.error("Error fetching test case:", error);
                     });
             }
+
+            // Set a timeout of 5 minutes (300000 milliseconds)
+            const timeout = 300000;
+            setTimeout(() => {
+                // Timeout logic: enable the button again after 3 minutes
+                isLoading.value = false;
+            }, timeout);
         }
 
 
         function clearLocalStorage() {
-            chrome.storage.local.remove('prompt');
-            chrome.storage.local.remove('defectDescription');
-            chrome.storage.local.remove('testCase');
-            chrome.storage.local.set({ "isLoading": false });
+            chrome.storage.sync.remove('prompt');
+            chrome.storage.sync.remove('defectDescription');
+            chrome.storage.sync.remove('testCase');
+            chrome.storage.sync.set({ "isLoading": false });
             defaultValue();
         }
 
@@ -205,16 +253,12 @@ export default defineComponent({
 
         function extractTaskId(url: string): string | null {
             // Regular expression to match either pattern
-            const taskIdRegex = /(?:child=|\/0\/\d+\/)(\d+)/;
-            const match = url.match(taskIdRegex);
+            //const taskIdRegex = /\/(\d+)(?:\/[a-zA-Z])?(?:\/?)$/;
+            let match = url.match(/child=(\d+)|\/(\d+)\/f|\/(\d+)$/);
+            const taskId  = match ? match[1] || match[2] || match[3] : null;
 
-            if (match && match[1]) {
-                return match[1];
-            } else {
-                return null;
-            }
+            return taskId
         }
-
 
         function get_ticket() {
             console.log("get ticket hit!")
@@ -222,9 +266,11 @@ export default defineComponent({
                 const activeTab = tabs[0];
                 const url = activeTab.url;
                 mainTicket.value = url || "";
-                chrome.storage.local.set({ "mainTicket": mainTicket.value });
+                console.log(mainTicket.value);
+                chrome.storage.sync.set({ "mainTicket": mainTicket.value });
                 if (mainTicket.value.includes("asana")) {
                     const taskGid = extractTaskId(mainTicket.value);
+                    console.log(taskGid);
                     const asanaApiKey = import.meta.env.VITE_ASANA_API_KEY;
                     axios.get(`https://app.asana.com/api/1.0/tasks/${taskGid}`, {
                         headers: {
@@ -254,20 +300,25 @@ export default defineComponent({
 
         // update prompt value when value changes
         watch(prompt, (newValue) => {
-            // Save the updated prompt value to local storage
-            chrome.storage.local.set({ "prompt": newValue });
+            // Save the updated prompt value to sync storage
+            chrome.storage.sync.set({ "prompt": newValue });
         });
 
         // update defectDescription value when value changes
         watch(defectDescription, (newValue) => {
-            // Save the updated defectDescription value to local storage
-            chrome.storage.local.set({ "defectDescription": newValue });
+            // Save the updated defectDescription value to sync storage
+            chrome.storage.sync.set({ "defectDescription": newValue });
+        });
+
+        watch(defectDescription, (newValue) => {
+            // Save the updated defectDescription value to sync storage
+            chrome.storage.sync.set({ "defectDescription": newValue });
         });
 
         // update defectDescription value when value changes
         watch(testCase, (newValue) => {
-            // Save the updated defectDescription value to local storage
-            chrome.storage.local.set({ "testCase": newValue }, () => {
+            // Save the updated defectDescription value to sync storage
+            chrome.storage.sync.set({ "testCase": newValue }, () => {
                 if (chrome.runtime.lastError) {
                     console.error(chrome.runtime.lastError)
                 }
@@ -280,7 +331,10 @@ export default defineComponent({
             changeTab,
             mainTicket,
             prompt, defectDescription, testCase, resetPrompt, generate, get_ticket,
-            clearLocalStorage, isLoading
+            clearLocalStorage, isLoading,
+            promptTemplates,
+            selectedTemplate,
+            applyTemplate,
         };
     },
 });
@@ -318,6 +372,33 @@ export default defineComponent({
     /* center horizontally */
 }
 
+.button-select-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-container {
+  flex-grow: 1;
+  text-align: left;
+}
+
+.template-select {
+  /* Add styling to the select element */
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-left: 10px; /* Add margin-left to create spacing between the Reset button and Select */
+}
+
+.reset-button {
+  /* Add styling to the Reset button */
+  padding: 4px 8px;
+  margin: 0; /* Reset the default margin */
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
 
 @keyframes spin {
     to {

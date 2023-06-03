@@ -12,7 +12,7 @@
                     <label for="name">Name:<span class="required-star">*</span></label>
                 </div>
                 <div>
-                    <textarea id="name" v-model="name" required></textarea>
+                    <textarea id="name" v-model="name" rows="1" required></textarea>
                 </div>
             </div>
             <div class="form-field">
@@ -155,7 +155,7 @@ export default defineComponent({
 
 
         onMounted(() => {
-            chrome.storage.local.get("taskUrl", (data) => {
+            chrome.storage.sync.get("taskUrl", (data) => {
                 if (data.taskUrl) {
                     taskUrl.value = data.taskUrl;
                 } else {
@@ -163,10 +163,11 @@ export default defineComponent({
                 }
             });
 
-            // load saved form data from chrome.storage.local on component mount
-            chrome.storage.local.get(["formData"], (result) => {
+            // load saved form data from chrome.storage.sync on component mount
+            chrome.storage.sync.get(["formData"], (result) => {
+                console.log('tes2');
                 if (result.formData) {
-                    console.log("I am using formData");
+                    console.log('test');
                     //const formData = result.formData || {};
                     const formData = JSON.parse(result.formData) || {};
                     name.value = formData.name;
@@ -180,12 +181,11 @@ export default defineComponent({
                     mainTicket.value = formData.mainTicket || props.main_ticket;
                     generatedBy.value = formData.generatedBy;
                     getTestCase();
-                    if (preCondition.value == '') {
-                        // if no formData, extract test case to fill the test case related fields
-                        selectTestCase(0);
-                    }
+                    selectTestCase(0);
                 } else {
-
+                    getTestCase();
+                    selectTestCase(0);
+                    mainTicket.value = props.main_ticket;
                 }
 
             });
@@ -193,10 +193,12 @@ export default defineComponent({
         });
 
         function getTestCase() {
+            console.log('test');
             if (inputText.includes("Name:") || inputText.includes("Name：")) {
                 //const splitText = inputText.split(/(?:Name[:：])/).slice(1);
                 const splitText = inputText.split(/(?:\d+\.\s)?(?:Name[:：])/).slice(1);
                 console.log(splitText);
+
                 if (splitText.length > 0) {
                     testCases.value = splitText.map(testCaseText => {
                         const preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
@@ -230,23 +232,23 @@ export default defineComponent({
 
         function createTask() {
             // Implement the logic for creating a task using the form data
-            chrome.storage.local.get("formData", (data) => {
+            chrome.storage.sync.get("formData", (data) => {
                 if (data.formData) {
                     const formDataString = data.formData;
                     if (formDataString) {
                         const formData = JSON.parse(formDataString);
                         console.log(formData);
                         isCreateLoading.value = true;
-                        chrome.storage.local.set({ "isCreateLoading": true });
+                        chrome.storage.sync.set({ "isCreateLoading": true });
                         const projectGid = '1203880491753826';  //master script
                         const asanaApiKey = import.meta.env.VITE_ASANA_API_KEY;
                         createAsanaTask(formData, projectGid, asanaApiKey)
                             .then(task_url => {
                                 console.log(task_url);
                                 taskUrl.value = task_url.task_url;
-                                chrome.storage.local.set({ taskUrl: taskUrl.value });
+                                chrome.storage.sync.set({ taskUrl: taskUrl.value });
                                 isCreateLoading.value = false;
-                                chrome.storage.local.set({ "isCreateLoading": false });
+                                chrome.storage.sync.set({ "isCreateLoading": false });
                             })
                             .catch(error => {
                                 // Handle error
@@ -260,9 +262,9 @@ export default defineComponent({
 
         }
         function clearLocalStorage() {
-            chrome.storage.local.remove('taskUrl')
-            chrome.storage.local.remove('formData')
-            chrome.storage.local.set({ "isCreateLoading": false });
+            chrome.storage.sync.remove('taskUrl')
+            chrome.storage.sync.remove('formData')
+            chrome.storage.sync.set({ "isCreateLoading": false });
             taskUrl.value = null;
             defaultValue();
         }
@@ -295,13 +297,13 @@ export default defineComponent({
                 mainTicket: mainTicket.value,
                 generatedBy: generatedBy.value,
             };
-            chrome.storage.local.set({ formData: JSON.stringify(updatedFormData) });
+            chrome.storage.sync.set({ formData: JSON.stringify(updatedFormData) });
             console.log('new data set');
         });
 
         // Watch the taskUrl property for changes and update localStorage
         watch(taskUrl, (newValue) => {
-            chrome.storage.local.set({ taskUrl: newValue || '' });
+            chrome.storage.sync.set({ taskUrl: newValue || '' });
         });
 
         return {
