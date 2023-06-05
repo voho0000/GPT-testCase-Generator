@@ -24,11 +24,18 @@
             </div>
             <div>
                 <div class="item-container">
-                    <label >Defect Description:</label>
+                    <label>Defect Description:</label>
                 </div>
                 <div>
                     <textarea v-model="defectDescription" class="textarea" rows="8"></textarea>
                 </div>
+            </div>
+            <div class="token-count">
+                <!--make the Note next line-->
+                <p>Token Count: {{ tokenCount }} <br>
+                    Note: This token count is specific to GPT-3, just for reference.
+                </p> <!-- Display the token count -->
+                <p>Model: {{ model }}, Source: {{ source }}, temperature: {{ temperature }} </p>
             </div>
             <div>
                 <div class="item-container">
@@ -63,6 +70,7 @@ import Form from "./Form.vue";
 import Prompt from "./Prompt.vue";
 import { defineComponent, ref, onMounted, watch } from "vue";
 import axios from 'axios';
+import { encode } from '@nem035/gpt-3-encoder';
 
 interface Template {
     id: number;
@@ -99,45 +107,56 @@ export default defineComponent({
         const selectedTemplate = ref<string>("");
         const promptTemplates = ref<Template[]>([]);
 
+        const tokenCount = ref<number>(0);
+
+        const model = ref<string>('gpt-3.5-turbo');
+        const temperature = ref<number>(0.5);
+        const endpoint = ref<string>('');
+        const source = ref<string>('openai');
+        const apiKey = ref<string>('');
 
 
         onMounted(() => {
-            // Read isLoading from localStorage and update the value of isLoading
-            chrome.storage.sync.get(["isLoading"], (data) => {
-                isLoading.value = data.isLoading || false;
-            });
-
-            chrome.storage.sync.get("prompt", (data) => {
-                if (data.prompt) {
+            chrome.storage.sync.get(
+                {
+                    isLoading: false,
+                    prompt: '',
+                    defectDescription: '',
+                    testCase: '',
+                    templates: null,
+                    model: 'gpt-3.5-turbo',
+                    temperature: 0.5,
+                    endpoint: '',
+                    source: 'openai'
+                },
+                (data) => {
+                    isLoading.value = data.isLoading;
                     prompt.value = data.prompt;
-                } else {
-                    prompt.value = ''
-                }
-            });
-
-            chrome.storage.sync.get("defectDescription", (data) => {
-                if (data.defectDescription) {
                     defectDescription.value = data.defectDescription;
-                } else {
-                    defectDescription.value = ''
-                }
-            });
-
-            chrome.storage.sync.get("testCase", (data) => {
-                if (data.testCase) {
                     testCase.value = data.testCase;
-                } else {
-                    testCase.value = ''
+                    promptTemplates.value = data.templates ? Object.values(data.templates) : [];
+                    model.value = data.model;
+                    temperature.value = Number(data.temperature);
+                    endpoint.value = data.endpoint;
+                    source.value = data.source;
+                    if (source.value == 'openai') {
+                        chrome.storage.sync.get(["openaiApiKey"], (data) => {
+                            if (data.openaiApiKey) {
+                                apiKey.value = data.openaiApiKey;
+                            }
+                        });
+                    } else if (source.value == 'azure') {
+                        chrome.storage.sync.get(["azureApiKey"], (data) => {
+                            if (data.azureApiKey) {
+                                apiKey.value = data.azureApiKey;
+                            }
+                        });
+                    }
                 }
-            });
-
-            chrome.storage.sync.get(["templates"], (data) => {
-                if (data.templates) {
-                    promptTemplates.value = Object.values(data.templates);
-                }
-            });
-
+            );
         });
+
+
 
         function applyTemplate() {
             const template = promptTemplates.value.find(t => t.id.toString() === selectedTemplate.value);
@@ -161,31 +180,32 @@ export default defineComponent({
             // Combine prompt and defectDescription
             const full_prompt = `${prompt.value || ''} *** ${defectDescription.value || ''} ***`;
             // Define whether to use GPT4
-            const useGPT4 = true;
+            const useGPT4 = false;
+            console.log(full_prompt);
+
+            const encoded = encode(full_prompt);
+            console.log('Number of tokens: ', encoded.length);
 
             let data;
             let headers;
-            let apiKey;
-            const max_tokens = 2000;
-            console.log(max_tokens);
-            const temperature = 0.5;
+            //const max_tokens = 4096;
 
-            if (useGPT4) {
-                apiKey = import.meta.env.VITE_AZURE_API_KEY;
+            if (source.value == 'openai') {
+                console.log(apiKey.value);
                 data = {
+                    "model": model.value,
                     "messages": [
                         { "role": "system", "content": "You are a helpful assistant." },
                         { "role": "user", "content": full_prompt }
                     ],
-                    "max_tokens": max_tokens,
-                    "temperature": temperature
+                    //"max_tokens": max_tokens,
+                    "temperature": temperature.value
                 };
                 headers = {
                     'Content-Type': 'application/json',
-                    'api-key': apiKey
+                    'Authorization': `Bearer ${apiKey.value}`
                 };
-                axios.post("https://user1-create-gpt.openai.azure.com/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                    data, { headers })
+                axios.post("https://api.openai.com/v1/chat/completions", data, { headers })
                     .then(response => {
                         const test_steps = response.data['choices'][0]['message']['content'].trim();
                         console.log(response);
@@ -197,22 +217,35 @@ export default defineComponent({
                     .catch((error) => {
                         console.error("Error fetching test case:", error);
                     });
-            } else {
-                apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+            } else if (source.value == 'azure') {
+                console.log(apiKey.value);
                 data = {
-                    "model": "gpt-3.5-turbo",
                     "messages": [
                         { "role": "system", "content": "You are a helpful assistant." },
                         { "role": "user", "content": full_prompt }
                     ],
-                    "max_tokens": max_tokens,
-                    "temperature": temperature
+                    //"max_tokens": max_tokens,
+                    "temperature": temperature.value
                 };
                 headers = {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
+                    'api-key': apiKey.value
                 };
-                axios.post("https://api.openai.com/v1/chat/completions", data, { headers })
+
+                // check endpoint url format
+                if (!endpoint.value.endsWith('/')) {
+                    endpoint.value += '/';
+                }
+
+                // check model name format
+                if (model.value == 'gpt-3.5-turbo') {
+                    model.value = 'gpt-35-turbo'
+                }
+
+                const realEndpoint = `${endpoint.value}openai/deployments/${model.value}/chat/completions?api-version=2023-03-15-preview`;
+                console.log(realEndpoint);
+                axios.post(realEndpoint,
+                    data, { headers })
                     .then(response => {
                         const test_steps = response.data['choices'][0]['message']['content'].trim();
                         console.log(response);
@@ -220,7 +253,6 @@ export default defineComponent({
                         chrome.storage.sync.set({ "isLoading": false });
                         testCase.value = test_steps;
                         isLoading.value = false;
-                        console.log(isLoading.value);
                     })
                     .catch((error) => {
                         console.error("Error fetching test case:", error);
@@ -255,7 +287,7 @@ export default defineComponent({
             // Regular expression to match either pattern
             //const taskIdRegex = /\/(\d+)(?:\/[a-zA-Z])?(?:\/?)$/;
             let match = url.match(/child=(\d+)|\/(\d+)\/f|\/(\d+)$/);
-            const taskId  = match ? match[1] || match[2] || match[3] : null;
+            const taskId = match ? match[1] || match[2] || match[3] : null;
 
             return taskId
         }
@@ -290,11 +322,7 @@ export default defineComponent({
                             console.log(error);
                         });
                 }
-
-
             });
-
-
         }
 
 
@@ -326,10 +354,21 @@ export default defineComponent({
             );
         });
 
+        watch([prompt, defectDescription], ([newPrompt, newDefectDescription]) => {
+            const fullPrompt = `${newPrompt || ''} *** ${newDefectDescription || ''} ***`;
+            const encoded = encode(fullPrompt);
+            tokenCount.value = encoded.length;
+        });
+
         return {
             currentTab,
             changeTab,
             mainTicket,
+            tokenCount,
+            model,
+            temperature,
+            endpoint,
+            source,
             prompt, defectDescription, testCase, resetPrompt, generate, get_ticket,
             clearLocalStorage, isLoading,
             promptTemplates,
@@ -373,31 +412,33 @@ export default defineComponent({
 }
 
 .button-select-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .item-container {
-  flex-grow: 1;
-  text-align: left;
+    flex-grow: 1;
+    text-align: left;
 }
 
 .template-select {
-  /* Add styling to the select element */
-  padding: 4px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-left: 10px; /* Add margin-left to create spacing between the Reset button and Select */
+    /* Add styling to the select element */
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-left: 10px;
+    /* Add margin-left to create spacing between the Reset button and Select */
 }
 
 .reset-button {
-  /* Add styling to the Reset button */
-  padding: 4px 8px;
-  margin: 0; /* Reset the default margin */
-  background-color: #f5f5f5;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+    /* Add styling to the Reset button */
+    padding: 4px 8px;
+    margin: 0;
+    /* Reset the default margin */
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 @keyframes spin {

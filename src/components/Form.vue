@@ -102,9 +102,8 @@
 
 import { defineComponent, ref, watch, onMounted } from 'vue';
 import Multiselect from '@vueform/multiselect'
-import axios from 'axios';
 import Navigation from "./Navigation.vue";
-import { caseSuiteOptions, manualTestCoverageOptions, manualTestEnvironmentOptions, caseSourceOptions, generatedByOptions } from './options';
+import { caseSuiteOptions, manualTestCoverageOptions, manualTestEnvironmentOptions, caseSourceOptions, generatedByOptions } from './AsanaOptions';
 import { createAsanaTask } from './AsanaField';
 
 
