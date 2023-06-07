@@ -1,6 +1,11 @@
 <template>
     <div id="app">
         <h1>GPT Test Case Generator</h1>
+        <div class="settings-button-container">
+            <button class="settings-button" @click="openOptionsPage">
+                <font-awesome-icon icon="cog" />
+            </button>
+        </div>
         <Navigation :current-tab="currentTab" @change-tab="changeTab" />
         <div v-if="currentTab === 'Popup'">
             <div>
@@ -99,11 +104,11 @@ export default defineComponent({
         }
 
 
-        const defaultPrompt = "我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述來產出之後在進行手動測試時能涵蓋到此缺陷測試的測試案例，需去除使用者的可識別資訊，預期結果為正常結果，若有附上PRD，還需要增加能涵蓋PRD的使用情境的測試案例，若無附上則不用，產生的測試案例需要包含Name, Pre-Condition, Test Step, Expected Result ";
-        const prompt = ref(defaultPrompt);
-        const defectDescription = ref('');
-        const testCase = ref("");
-        const mainTicket = ref("");
+        const defaultPrompt = ref<string>("");
+        const prompt = ref<string>("");
+        const defectDescription = ref<string>('');
+        const testCase = ref<string>("");
+        const mainTicket = ref<string>("");
         const selectedTemplate = ref<string>("");
         const promptTemplates = ref<Template[]>([]);
 
@@ -127,7 +132,8 @@ export default defineComponent({
                     model: 'gpt-3.5-turbo',
                     temperature: 0.5,
                     endpoint: '',
-                    source: 'openai'
+                    source: 'openai',
+                    defaultPrompt: '',
                 },
                 (data) => {
                     isLoading.value = data.isLoading;
@@ -139,6 +145,7 @@ export default defineComponent({
                     temperature.value = Number(data.temperature);
                     endpoint.value = data.endpoint;
                     source.value = data.source;
+                    defaultPrompt.value = data.defaultPrompt;
                     if (source.value == 'openai') {
                         chrome.storage.sync.get(["openaiApiKey"], (data) => {
                             if (data.openaiApiKey) {
@@ -166,7 +173,7 @@ export default defineComponent({
         };
 
         function resetPrompt() {
-            prompt.value = defaultPrompt;
+            prompt.value = defaultPrompt.value;
             selectedTemplate.value = "";
             chrome.storage.sync.set({ "prompt": defaultPrompt });
         }
@@ -269,7 +276,6 @@ export default defineComponent({
 
 
         function clearLocalStorage() {
-            chrome.storage.sync.remove('prompt');
             chrome.storage.sync.remove('defectDescription');
             chrome.storage.sync.remove('testCase');
             chrome.storage.sync.set({ "isLoading": false });
@@ -277,7 +283,6 @@ export default defineComponent({
         }
 
         function defaultValue() {
-            prompt.value = '';
             defectDescription.value = '';
             testCase.value = '';
             isLoading.value = false;
@@ -293,7 +298,6 @@ export default defineComponent({
         }
 
         function get_ticket() {
-            console.log("get ticket hit!")
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const activeTab = tabs[0];
                 const url = activeTab.url;
@@ -323,6 +327,11 @@ export default defineComponent({
                         });
                 }
             });
+        }
+
+        function openOptionsPage() {
+            chrome.runtime.openOptionsPage();
+            window.close(); // Close the popup after opening the options page
         }
 
 
@@ -374,6 +383,7 @@ export default defineComponent({
             promptTemplates,
             selectedTemplate,
             applyTemplate,
+            openOptionsPage
         };
     },
 });
@@ -439,6 +449,27 @@ export default defineComponent({
     background-color: #f5f5f5;
     border: 1px solid #ccc;
     border-radius: 4px;
+}
+
+.settings-button-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.settings-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.settings-button i {
+    color: #000000;
+}
+
+.settings-button:hover i {
+    color: darkblue;
 }
 
 @keyframes spin {

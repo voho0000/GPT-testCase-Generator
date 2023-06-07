@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const azureApiKeyLabel = document.querySelector('#azureApiKeyLabel') as HTMLLabelElement;
   const openaiApiKeyLabel = document.querySelector('#openaiApiKeyLabel') as HTMLLabelElement;
   const modelSelect = document.querySelector('#model') as HTMLSelectElement;
+  const defaultPromptTextarea = document.querySelector('#defaultPrompt') as HTMLTextAreaElement; // Add reference to the default prompt textarea
 
 
   function saveOptions() {
@@ -19,10 +20,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const endpoint = (document.querySelector('#endpoint') as HTMLInputElement).value;
     const azureApiKey = azureApiKeyInput.value;
     const openaiApiKey = openaiApiKeyInput.value;
+    const defaultPrompt = defaultPromptTextarea.value;
 
     if (source === 'openai') {
       chrome.storage.sync.set(
-        { temperature, model, source, openaiApiKey },
+        { temperature, model, source, openaiApiKey, defaultPrompt },
         () => {
           const status = document.getElementById('status');
           if (status) {
@@ -35,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     } else if (source === 'azure') {
       chrome.storage.sync.set(
-        { temperature, model, source, endpoint, azureApiKey },
+        { temperature, model, source, endpoint, azureApiKey, defaultPrompt },
         () => {
           const status = document.getElementById('status');
           if (status) {
@@ -51,7 +53,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function restoreOptions() {
     chrome.storage.sync.get(
-      { temperature: '', model: '', source: 'openai', endpoint: '', azureApiKey: '', openaiApiKey: '' },
+      {
+        temperature: '',
+        model: 'gpt-3.5-turbo',
+        source: 'openai',
+        endpoint: '',
+        azureApiKey: '',
+        openaiApiKey: '',
+        defaultPrompt: ''
+      },
       function (data) {
         temperatureInput.value = data.temperature;
         document.querySelector('#temperatureValue')!.textContent = temperatureInput.value;
@@ -61,9 +71,7 @@ document.addEventListener('DOMContentLoaded', function () {
         (document.querySelector('#endpoint') as HTMLInputElement).value = data.endpoint;
         azureApiKeyInput.value = data.azureApiKey;
         openaiApiKeyInput.value = data.openaiApiKey;
-
-        console.log("azureApiKey:", data.azureApiKey);
-        console.log("openaiApiKey:", data.openaiApiKey);
+        defaultPromptTextarea.value = data.defaultPrompt; // Set the value of the default prompt textarea
 
         toggleEndpointField(data.source);
         toggleApiKeyFields(data.source);
