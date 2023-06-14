@@ -11,7 +11,7 @@
             <div>
                 <div class="button-select-container">
                     <div class="item-container">
-                        <label>Prompt:</label>
+                        <label >Prompt:</label>
                     </div>
                     <div class="button-container">
                         <button @click="resetPrompt" class="reset-button">Reset</button>

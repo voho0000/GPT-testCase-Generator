@@ -3,18 +3,16 @@
 
 <head>
   <title>ChatGPT Options</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
   <style>
-    .container {
-      max-width: 600px;
-      /* Adjust the width as needed */
-      margin-top: 30px;
+    .custom-width {
+      margin: auto;
+      width: 40%;
     }
   </style>
 </head>
 
 <body>
-  <div class="container ">
+  <div class="custom-width">
     <h1 class="text-center">GPT Options</h1>
     <form id="optionsForm">
       <div class="mb-3">
@@ -30,6 +28,9 @@
           <option value="gpt-3.5-turbo">GPT-3.5-Turbo</option>
           <option value="gpt-4">GPT-4</option>
           <option value="gpt-4-32k">GPT-4-32k</option>
+          <option value="gpt-3.5-turbo-16k" class="openai">GPT-3.5-Turbo-16k</option>
+          <option value="gpt-3.5-turbo-0613" class="openai">GPT-3.5-Turbo-0613</option>
+      
         </select>
       </div>
       <div class="mb-3">
@@ -37,11 +38,13 @@
         <span id="temperatureValue"></span>
         <input type="range" id="temperature" name="temperature" class="form-range" min="0" max="2" step="0.1">
         <div id="passwordHelpBlock" class="form-text">
-          The temperature parameter in GPT controls the randomness of the generated text, allowing you to adjust the balance between predictable and creative output.        </div>
+          The temperature parameter in GPT controls the randomness of the generated text, allowing you to adjust the
+          balance between predictable and creative output. </div>
       </div>
       <div class="mb-3" id="endpointContainer">
         <label for="endpoint" class="form-label">Endpoint:</label>
-        <input type="url" id="endpoint" name="endpoint" class="form-control" placeholder="https://YOURS.openai.azure.com/">
+        <input type="url" id="endpoint" name="endpoint" class="form-control"
+          placeholder="https://YOURS.openai.azure.com/">
       </div>
       <div class="mb-3 row align-items-center">
         <label for="azureApiKey" id="azureApiKeyLabel" class="form-label">Azure API Key:</label>
@@ -72,8 +75,7 @@
       </div>
     </form>
   </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-  <script src="/src/options.ts"></script>
+  <script src="js/options.ts" type="module"></script>
 </body>
 
 </html>

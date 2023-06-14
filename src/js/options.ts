@@ -1,3 +1,9 @@
+// Import our custom CSS
+import '../scss/styles.scss'
+
+// Import all of Bootstrap's JS
+import * as bootstrap from 'bootstrap'
+
 document.addEventListener('DOMContentLoaded', function () {
   const temperatureInput = document.querySelector('#temperature') as HTMLInputElement;
   const saveButton = document.querySelector('#saveButton') as HTMLButtonElement;
@@ -80,17 +86,46 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function toggleEndpointField(source: string) {
+    // Get the OpenAI exclusive options
+    const openaiOptions = document.querySelectorAll<HTMLOptionElement>('.openai');
+  
     if (source === 'openai') {
       endpointContainer.style.display = 'none';
-      // If OpenAI is selected, set the model select element to gpt-3.5-turbo and disable it
-      modelSelect.value = 'gpt-3.5-turbo';
-      modelSelect.disabled = true;
+
+      modelSelect.value = 'gpt-3.5-turbo-0613';
+  
+      // Hide Azure exclusive options and show OpenAI exclusive options
+      for (let i = 0; i < modelSelect.options.length; i++) {
+        const option = modelSelect.options[i];
+        if (option.value.startsWith('gpt-4')) {
+          option.hidden = true;
+        }
+      }
+  
+      // Show OpenAI exclusive options
+      openaiOptions.forEach(option => {
+        option.hidden = false;
+      });
     } else {
       endpointContainer.style.display = 'block';
-      // If Azure is selected, enable the model select element
-      modelSelect.disabled = false;
+
+      modelSelect.value = 'gpt-3.5-turbo';
+  
+      // Show Azure exclusive options and hide OpenAI exclusive options
+      for (let i = 0; i < modelSelect.options.length; i++) {
+        const option = modelSelect.options[i];
+        if (option.value.startsWith('gpt-4')) {
+          option.hidden = false;
+        }
+      }
+  
+      // Hide OpenAI exclusive options
+      openaiOptions.forEach(option => {
+        option.hidden = true;
+      });
     }
   }
+  
 
   function toggleApiKeyFields(source: string) {
     if (source === 'openai') {
