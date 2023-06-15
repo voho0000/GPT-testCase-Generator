@@ -9,9 +9,12 @@
         <Navigation :current-tab="currentTab" @change-tab="changeTab" />
         <div v-if="currentTab === 'Popup'">
             <div>
+                <div>
+                    <p>Model: {{ model }}, Source: {{ source }}, temperature: {{ temperature }} </p>
+                </div>
                 <div class="button-select-container">
                     <div class="item-container">
-                        <label >Prompt:</label>
+                        <label>Prompt:</label>
                     </div>
                     <div class="button-container">
                         <button @click="resetPrompt" class="reset-button">Reset</button>
@@ -37,10 +40,8 @@
             </div>
             <div class="token-count">
                 <!--make the Note next line-->
-                <p>Token Count: {{ tokenCount }} <br>
-                    Note: This token count is specific to GPT-3, just for reference.
+                <p>Token Count: {{ tokenCount }} (for reference only) <br>
                 </p> <!-- Display the token count -->
-                <p>Model: {{ model }}, Source: {{ source }}, temperature: {{ temperature }} </p>
             </div>
             <div>
                 <div class="item-container">
@@ -55,10 +56,12 @@
                 <p>Generating test case...</p>
             </div>
             <div v-else></div> <!-- Properly closed div for v-else -->
-            <div class="button-container">
-                <button type="button" @click="clearLocalStorage">Clear</button>
-                <button @click="get_ticket">Get a Asana ticket</button>
-                <button @click="generate" :disabled="isLoading">Generate</button>
+            <div class="sticky-buttons">
+                <div class="button-container">
+                    <button type="button" @click="clearLocalStorage">Clear</button>
+                    <button @click="get_ticket">Get a Asana ticket</button>
+                    <button @click="generate" :disabled="isLoading">Generate</button>
+                </div>
             </div>
         </div>
         <Form v-else-if="currentTab === 'PopupTaskForm'" :testCase="testCase" :main_ticket="mainTicket" />
@@ -120,6 +123,22 @@ export default defineComponent({
         const source = ref<string>('openai');
         const apiKey = ref<string>('');
 
+        chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+            if (message.action === 'updateTestCase') {
+                // Update the testCase value based on the received message
+                testCase.value = message.testCase;
+                isLoading.value = false;
+                console.log('I am updated')
+            }
+        });
+
+        chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+            if (message.action === 'updateDefect') {
+                // Update the testCase value based on the received message
+                defectDescription.value = message.defectDescription;
+                console.log('update defect')
+            }
+        });
 
         onMounted(() => {
             chrome.storage.sync.get(
@@ -182,95 +201,17 @@ export default defineComponent({
 
         function generate() {
             isLoading.value = true;
-            chrome.storage.sync.set({ "isLoading": true });
-
-            // Combine prompt and defectDescription
-            const full_prompt = `${prompt.value || ''} *** ${defectDescription.value || ''} ***`;
-            // Define whether to use GPT4
-            const useGPT4 = false;
-            console.log(full_prompt);
-
-            const encoded = encode(full_prompt);
-            console.log('Number of tokens: ', encoded.length);
-
-            let data;
-            let headers;
-            //const max_tokens = 4096;
-
-            if (source.value == 'openai') {
-                console.log(apiKey.value);
-                data = {
-                    "model": model.value,
-                    "messages": [
-                        { "role": "system", "content": "You are a helpful assistant." },
-                        { "role": "user", "content": full_prompt }
-                    ],
-                    //"max_tokens": max_tokens,
-                    "temperature": temperature.value
-                };
-                headers = {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey.value}`
-                };
-                axios.post("https://api.openai.com/v1/chat/completions", data, { headers })
-                    .then(response => {
-                        const test_steps = response.data['choices'][0]['message']['content'].trim();
-                        console.log(response);
-                        chrome.storage.sync.set({ "testCase": test_steps });
-                        chrome.storage.sync.set({ "isLoading": false });
-                        testCase.value = test_steps;
-                        isLoading.value = false;
-                    })
-                    .catch((error) => {
-                        console.error("Error fetching test case:", error);
-                    });
-            } else if (source.value == 'azure') {
-                console.log(apiKey.value);
-                data = {
-                    "messages": [
-                        { "role": "system", "content": "You are a helpful assistant." },
-                        { "role": "user", "content": full_prompt }
-                    ],
-                    //"max_tokens": max_tokens,
-                    "temperature": temperature.value
-                };
-                headers = {
-                    'Content-Type': 'application/json',
-                    'api-key': apiKey.value
-                };
-
-                // check endpoint url format
-                if (!endpoint.value.endsWith('/')) {
-                    endpoint.value += '/';
-                }
-
-                // check model name format
-                if (model.value == 'gpt-3.5-turbo') {
-                    model.value = 'gpt-35-turbo'
-                }
-
-                const realEndpoint = `${endpoint.value}openai/deployments/${model.value}/chat/completions?api-version=2023-03-15-preview`;
-                console.log(realEndpoint);
-                axios.post(realEndpoint,
-                    data, { headers })
-                    .then(response => {
-                        const test_steps = response.data['choices'][0]['message']['content'].trim();
-                        console.log(response);
-                        chrome.storage.sync.set({ "testCase": test_steps });
-                        chrome.storage.sync.set({ "isLoading": false });
-                        testCase.value = test_steps;
-                        isLoading.value = false;
-                    })
-                    .catch((error) => {
-                        console.error("Error fetching test case:", error);
-                    });
-            }
+            // Send a message to the background script with the necessary data
+            chrome.runtime.sendMessage({
+                action: 'generate',
+            });
 
             // Set a timeout of 5 minutes (300000 milliseconds)
             const timeout = 300000;
             setTimeout(() => {
                 // Timeout logic: enable the button again after 3 minutes
                 isLoading.value = false;
+                chrome.storage.sync.set({ "isLoading": false });
             }, timeout);
         }
 
@@ -302,29 +243,28 @@ export default defineComponent({
                 const activeTab = tabs[0];
                 const url = activeTab.url;
                 mainTicket.value = url || "";
-                console.log(mainTicket.value);
-                chrome.storage.sync.set({ "mainTicket": mainTicket.value });
                 if (mainTicket.value.includes("asana")) {
                     const taskGid = extractTaskId(mainTicket.value);
                     console.log(taskGid);
-                    const asanaApiKey = import.meta.env.VITE_ASANA_API_KEY;
-                    axios.get(`https://app.asana.com/api/1.0/tasks/${taskGid}`, {
-                        headers: {
-                            'Authorization': `Bearer ${asanaApiKey}`,
-                        },
-                    })
-                        .then(response => {
-                            const task = response.data.data;
-                            const permanentLink = task.permalink_url;
-                            const taskDescription = task.notes;
-                            mainTicket.value = permanentLink;
-                            if (!defectDescription.value || defectDescription.value.trim() === '') {
-                                defectDescription.value = taskDescription;
-                            }
+                    chrome.storage.sync.get(['asanaApiKey'], (data) => {
+                        const asanaApiKey = data.asanaApiKey;
+                        axios.get(`https://app.asana.com/api/1.0/tasks/${taskGid}`, {
+                            headers: {
+                                'Authorization': `Bearer ${asanaApiKey}`,
+                            },
                         })
-                        .catch(error => {
-                            console.log(error);
-                        });
+                            .then(response => {
+                                const task = response.data.data;
+                                const permanentLink = task.permalink_url;
+                                const taskDescription = task.notes;
+                                mainTicket.value = permanentLink;
+                                chrome.storage.sync.set({ "mainTicket": permanentLink });
+                                defectDescription.value = taskDescription;
+                            })
+                            .catch(error => {
+                                console.log(error);
+                            });
+                    })
                 }
             });
         }
@@ -364,7 +304,7 @@ export default defineComponent({
         });
 
         watch([prompt, defectDescription], ([newPrompt, newDefectDescription]) => {
-            const fullPrompt = `${newPrompt || ''} *** ${newDefectDescription || ''} ***`;
+            const fullPrompt = `${newPrompt || ''}\n${newDefectDescription || ''}`;
             const encoded = encode(fullPrompt);
             tokenCount.value = encoded.length;
         });
@@ -470,6 +410,15 @@ export default defineComponent({
 
 .settings-button:hover i {
     color: darkblue;
+}
+
+.sticky-buttons {
+  position: sticky;
+  bottom: 0;
+  background-color: white;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+  z-index: 1;
 }
 
 @keyframes spin {

@@ -13,8 +13,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const openaiApiKeyInput = document.querySelector('#openaiApiKey') as HTMLInputElement;
   const azureApiKeyToggle = document.querySelector('#azureApiKeyToggle') as HTMLSpanElement;
   const openaiApiKeyToggle = document.querySelector('#openaiApiKeyToggle') as HTMLSpanElement;
+  const asanaApiKeyToggle = document.querySelector('#asanaApiKeyToggle') as HTMLSpanElement;
   const azureApiKeyLabel = document.querySelector('#azureApiKeyLabel') as HTMLLabelElement;
   const openaiApiKeyLabel = document.querySelector('#openaiApiKeyLabel') as HTMLLabelElement;
+  const asanaApiKeyInput = document.querySelector('#asanaApiKey') as HTMLInputElement; // Add reference to the Asana API key input field
   const modelSelect = document.querySelector('#model') as HTMLSelectElement;
   const defaultPromptTextarea = document.querySelector('#defaultPrompt') as HTMLTextAreaElement; // Add reference to the default prompt textarea
 
@@ -26,11 +28,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const endpoint = (document.querySelector('#endpoint') as HTMLInputElement).value;
     const azureApiKey = azureApiKeyInput.value;
     const openaiApiKey = openaiApiKeyInput.value;
+    const asanaApiKey = asanaApiKeyInput.value;
     const defaultPrompt = defaultPromptTextarea.value;
-
     if (source === 'openai') {
       chrome.storage.sync.set(
-        { temperature, model, source, openaiApiKey, defaultPrompt },
+        { temperature, model, source, openaiApiKey, asanaApiKey, defaultPrompt },
         () => {
           const status = document.getElementById('status');
           if (status) {
@@ -43,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     } else if (source === 'azure') {
       chrome.storage.sync.set(
-        { temperature, model, source, endpoint, azureApiKey, defaultPrompt },
+        { temperature, model, source, endpoint, azureApiKey, asanaApiKey, defaultPrompt },
         () => {
           const status = document.getElementById('status');
           if (status) {
@@ -60,12 +62,13 @@ document.addEventListener('DOMContentLoaded', function () {
   function restoreOptions() {
     chrome.storage.sync.get(
       {
-        temperature: '',
+        temperature: '0.5',
         model: 'gpt-3.5-turbo',
         source: 'openai',
         endpoint: '',
         azureApiKey: '',
         openaiApiKey: '',
+        asanaApiKey: '',
         defaultPrompt: ''
       },
       function (data) {
@@ -77,6 +80,7 @@ document.addEventListener('DOMContentLoaded', function () {
         (document.querySelector('#endpoint') as HTMLInputElement).value = data.endpoint;
         azureApiKeyInput.value = data.azureApiKey;
         openaiApiKeyInput.value = data.openaiApiKey;
+        asanaApiKeyInput.value = data.asanaApiKey;
         defaultPromptTextarea.value = data.defaultPrompt; // Set the value of the default prompt textarea
 
         toggleEndpointField(data.source);
@@ -88,12 +92,14 @@ document.addEventListener('DOMContentLoaded', function () {
   function toggleEndpointField(source: string) {
     // Get the OpenAI exclusive options
     const openaiOptions = document.querySelectorAll<HTMLOptionElement>('.openai');
-  
+
     if (source === 'openai') {
       endpointContainer.style.display = 'none';
 
-      modelSelect.value = 'gpt-3.5-turbo-0613';
-  
+      if (modelSelect.value.startsWith('gpt-4')) {
+        modelSelect.value = 'gpt-3.5-turbo-0613';
+      }
+
       // Hide Azure exclusive options and show OpenAI exclusive options
       for (let i = 0; i < modelSelect.options.length; i++) {
         const option = modelSelect.options[i];
@@ -101,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
           option.hidden = true;
         }
       }
-  
+
       // Show OpenAI exclusive options
       openaiOptions.forEach(option => {
         option.hidden = false;
@@ -109,8 +115,11 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       endpointContainer.style.display = 'block';
 
-      modelSelect.value = 'gpt-3.5-turbo';
-  
+      if (modelSelect.value.endsWith('16k') || modelSelect.value.endsWith('0613')) {
+        modelSelect.value = 'gpt-4';
+      }
+
+
       // Show Azure exclusive options and hide OpenAI exclusive options
       for (let i = 0; i < modelSelect.options.length; i++) {
         const option = modelSelect.options[i];
@@ -118,14 +127,14 @@ document.addEventListener('DOMContentLoaded', function () {
           option.hidden = false;
         }
       }
-  
+
       // Hide OpenAI exclusive options
       openaiOptions.forEach(option => {
         option.hidden = true;
       });
     }
   }
-  
+
 
   function toggleApiKeyFields(source: string) {
     if (source === 'openai') {
@@ -179,6 +188,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Set up toggle for OpenAI API Key
   togglePasswordVisibility(openaiApiKeyInput, openaiApiKeyToggle);
+
+  // Set up toggle for Asana API Key
+  togglePasswordVisibility(asanaApiKeyInput, asanaApiKeyToggle);
 
   restoreOptions();
 });

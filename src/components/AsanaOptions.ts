@@ -13,4 +13,4 @@ export const manualTestEnvironmentOptions = ['INTT', 'STAGE', 'PROD', 'DEV'];
 export const caseSourceOptions = ['PRD', 'Defect', 'Testing', 'ETC', 'CR',
 'E2E', 'Use Case', 'Acceptance Criteria']
 
-export const generatedByOptions = ['Human', 'gpt-3.5-turbo']
+export const generatedByOptions = ['Human', 'AI']

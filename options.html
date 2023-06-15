@@ -13,7 +13,7 @@
 
 <body>
   <div class="custom-width">
-    <h1 class="text-center">GPT Options</h1>
+    <h2 class="text-center">GPT Options</h2>
     <form id="optionsForm">
       <div class="mb-3">
         <label for="source" class="form-label">Source:</label>
@@ -64,10 +64,19 @@
           <a href="#" id="openaiApiKeyToggle" class="link-opacity-100-hover">show</a>
         </div>
       </div>
+      <div class="mb-3 row align-items-center">
+        <label for="asanaApiKey" id="asanaApiKeyLabel" class="form-label">Asana API Key:</label>
+        <div class="col-10">
+          <input type="password" id="asanaApiKey" name="asanaApiKey" class="form-control">
+        </div>
+        <div class="col-2">
+          <a href="#" id="asanaApiKeyToggle" class="link-opacity-100-hover">show</a>
+        </div>
+      </div>
       <div class="mb-3">
         <label for="defaultPrompt" class="form-label">Default Prompt:</label>
         <div>
-          <textarea id="defaultPrompt" name="defaultPrompt" rows="5" class="form-control"></textarea>
+          <textarea id="defaultPrompt" name="defaultPrompt" rows="3" class="form-control"></textarea>
         </div>
       </div>
       <div class="mb-3 text-center">
@@ -75,7 +84,7 @@
       </div>
     </form>
   </div>
-  <script src="js/options.ts" type="module"></script>
+  <script src="./src/js/options.ts" type="module"></script>
 </body>
 
 </html>

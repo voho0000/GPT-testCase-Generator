@@ -204,7 +204,8 @@ export async function createAsanaTask(formData: FormData, projectGid: string, ap
 
     const customFields = createCustomFields(formData, fieldsGid, fieldsOptionGid);
 
-    let name = formData.generatedBy === "Human" ? "[MS] " + formData.name : "[MS][AI] " + formData.name;
+    //let name = formData.generatedBy === "Human" ? "[MS] " + formData.name : "[MS][AI] " + formData.name;
+    let name = "[MS] " + formData.name
 
     const result: any = await axios.post("https://app.asana.com/api/1.0/tasks", {
         data: {

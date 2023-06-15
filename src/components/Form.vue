@@ -135,7 +135,7 @@ export default defineComponent({
         const manualTestEnvironment = ref('STAGE');
         const caseSource = ref('Defect');
         const mainTicket = ref(props.main_ticket);
-        const generatedBy = ref('gpt-3.5-turbo');
+        const generatedBy = ref('AI');
 
 
         const taskUrl = ref<string | null>('');
@@ -164,20 +164,13 @@ export default defineComponent({
 
             // load saved form data from chrome.storage.sync on component mount
             chrome.storage.sync.get(["formData"], (result) => {
-                console.log('tes2');
                 if (result.formData) {
-                    console.log('test');
                     //const formData = result.formData || {};
                     const formData = JSON.parse(result.formData) || {};
-                    name.value = formData.name;
                     caseSuite.value = Array.isArray(formData.caseSuite) ? formData.caseSuite : [];
                     manualTestCoverage.value = formData.manualTestCoverage;
-                    preCondition.value = formData.preCondition;
-                    testStep.value = formData.testStep;
-                    expectedResult.value = formData.expectedResult;
                     manualTestEnvironment.value = formData.manualTestEnvironment;
                     caseSource.value = formData.caseSource;
-                    mainTicket.value = formData.mainTicket || props.main_ticket;
                     generatedBy.value = formData.generatedBy;
                     getTestCase();
                     selectTestCase(0);
@@ -187,6 +180,11 @@ export default defineComponent({
                     mainTicket.value = props.main_ticket;
                 }
 
+            });
+            chrome.storage.sync.get(["mainTicket"], (data) => {
+                if (data.mainTicket) {
+                    mainTicket.value = data.mainTicket;
+                }
             });
 
         });
@@ -240,19 +238,21 @@ export default defineComponent({
                         isCreateLoading.value = true;
                         chrome.storage.sync.set({ "isCreateLoading": true });
                         const projectGid = '1203880491753826';  //master script
-                        const asanaApiKey = import.meta.env.VITE_ASANA_API_KEY;
-                        createAsanaTask(formData, projectGid, asanaApiKey)
-                            .then(task_url => {
-                                console.log(task_url);
-                                taskUrl.value = task_url.task_url;
-                                chrome.storage.sync.set({ taskUrl: taskUrl.value });
-                                isCreateLoading.value = false;
-                                chrome.storage.sync.set({ "isCreateLoading": false });
-                            })
-                            .catch(error => {
-                                // Handle error
-                                console.log(error);
-                            });
+                        chrome.storage.sync.get(['asanaApiKey'], (data) => {
+                            const asanaApiKey = data.asanaApiKey;
+                            createAsanaTask(formData, projectGid, asanaApiKey)
+                                .then(task_url => {
+                                    console.log(task_url);
+                                    taskUrl.value = task_url.task_url;
+                                    chrome.storage.sync.set({ taskUrl: taskUrl.value });
+                                    isCreateLoading.value = false;
+                                    chrome.storage.sync.set({ "isCreateLoading": false });
+                                })
+                                .catch(error => {
+                                    // Handle error
+                                    console.log(error);
+                                });
+                        })
                     } else {
                         console.error("No formData found in localStorage");
                     };
@@ -278,7 +278,7 @@ export default defineComponent({
             manualTestEnvironment.value = 'STAGE';
             caseSource.value = 'Defect';
             mainTicket.value = '';
-            generatedBy.value = 'gpt-3.5-turbo';
+            generatedBy.value = 'AI';
             isCreateLoading.value = false;
         }
 
