@@ -190,28 +190,29 @@ export default defineComponent({
         });
 
         function getTestCase() {
-            console.log('test');
-            if (inputText.includes("Name:") || inputText.includes("Name：")) {
-                //const splitText = inputText.split(/(?:Name[:：])/).slice(1);
-                const splitText = inputText.split(/(?:\d+\.\s)?(?:Name[:：])/).slice(1);
-                console.log(splitText);
+            const paragraphs = inputText.split('\n\n');
+            let splitText, testCaseText, preConditionSplit, testStepSplit, expectedResultSplit;
+            paragraphs.forEach(paragraph => {
+                if (paragraph.includes("Name:") || paragraph.includes("Name：")) {
+                    splitText = paragraph.split(/(?:\d+\.\s)?(?:Name[:：])/).slice(1);
+                    if (splitText.length > 0) {
+                        testCaseText = splitText[0];
+                        preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
+                        testStepSplit = preConditionSplit[1].split(/(?:Test Step[:：])/);
+                        expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
 
-                if (splitText.length > 0) {
-                    testCases.value = splitText.map(testCaseText => {
-                        const preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
-                        const testStepSplit = preConditionSplit[1].split(/(?:Test Step[:：])/);
-                        const expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
-                        return {
+                        const testCase = {
                             name: preConditionSplit[0].trim(),
                             preCondition: testStepSplit[0].trim(),
                             testStep: expectedResultSplit[0].trim(),
                             expectedResult: expectedResultSplit[1].split(/(?:測試案例\d+[:：])/)[0].trim()
+                            //testCases.push(testCase);
+                            //console.log('one test case add')
                         };
-                    });
-                } else {
-                    // Handle the case when there's no match found
+                        testCases.value.push(testCase);
+                    }
                 }
-            }
+            })
         }
 
         function selectTestCase(index: number) {
@@ -297,7 +298,6 @@ export default defineComponent({
                 generatedBy: generatedBy.value,
             };
             chrome.storage.sync.set({ formData: JSON.stringify(updatedFormData) });
-            console.log('new data set');
         });
 
         // Watch the taskUrl property for changes and update localStorage
