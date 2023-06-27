@@ -190,29 +190,54 @@ export default defineComponent({
         });
 
         function getTestCase() {
-            const paragraphs = inputText.split('\n\n');
+            //const paragraphs = inputText.includes('\n\n') ? inputText.split('\n\n') : [inputText];
             let splitText, testCaseText, preConditionSplit, testStepSplit, expectedResultSplit;
-            paragraphs.forEach(paragraph => {
-                if (paragraph.includes("Name:") || paragraph.includes("Name：")) {
-                    splitText = paragraph.split(/(?:\d+\.\s)?(?:Name[:：])/).slice(1);
-                    if (splitText.length > 0) {
-                        testCaseText = splitText[0];
+            // paragraphs.forEach(paragraph => {
+            //     if (paragraph.includes("Name:") || paragraph.includes("Name：")) {
+            //         splitText = paragraph.split(/(?:\d+\.\s)?(?:Name[:：])/).slice(1);
+            //         if (splitText.length > 0) {
+            //             testCaseText = splitText[0];
+            //             preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
+            //             testStepSplit = preConditionSplit[1].split(/(?:Test Step[:：])/);
+            //             expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
+
+            //             const testCase = {
+            //                 name: preConditionSplit[0].trim(),
+            //                 preCondition: testStepSplit[0].trim(),
+            //                 testStep: expectedResultSplit[0].trim(),
+            //                 expectedResult: expectedResultSplit[1].split(/(?:測試案例\d+[:：])/)[0].trim()
+            //             };
+            //             testCases.value.push(testCase);
+            //         }
+            //     }
+            // })
+            if (inputText.includes("Name:") || inputText.includes("Name：")) {
+                splitText = inputText.split(/(?:\d+\.\s)?(?:Name[:：])/).slice(1);
+                if (splitText.length > 0) {
+                    splitText.forEach(paragraph => {
+                        testCaseText = paragraph;
                         preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
                         testStepSplit = preConditionSplit[1].split(/(?:Test Step[:：])/);
                         expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
+
+                        // to remove the warning words from GPT
+                        let expectedResult = expectedResultSplit[1].trim();
+                        if (expectedResult.includes('\n\n')) {
+                            expectedResult = expectedResult.split('\n\n')[0];
+                        }
 
                         const testCase = {
                             name: preConditionSplit[0].trim(),
                             preCondition: testStepSplit[0].trim(),
                             testStep: expectedResultSplit[0].trim(),
-                            expectedResult: expectedResultSplit[1].split(/(?:測試案例\d+[:：])/)[0].trim()
-                            //testCases.push(testCase);
-                            //console.log('one test case add')
+                            expectedResult: expectedResult
                         };
                         testCases.value.push(testCase);
                     }
+                    )
                 }
-            })
+            }
+
         }
 
         function selectTestCase(index: number) {
@@ -235,7 +260,6 @@ export default defineComponent({
                     const formDataString = data.formData;
                     if (formDataString) {
                         const formData = JSON.parse(formDataString);
-                        console.log(formData);
                         isCreateLoading.value = true;
                         chrome.storage.sync.set({ "isCreateLoading": true });
                         const projectGid = '1203880491753826';  //master script
@@ -243,7 +267,6 @@ export default defineComponent({
                             const asanaApiKey = data.asanaApiKey;
                             createAsanaTask(formData, projectGid, asanaApiKey)
                                 .then(task_url => {
-                                    console.log(task_url);
                                     taskUrl.value = task_url.task_url;
                                     chrome.storage.sync.set({ taskUrl: taskUrl.value });
                                     isCreateLoading.value = false;

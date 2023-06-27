@@ -17,7 +17,7 @@
                         <label>Prompt:</label>
                     </div>
                     <div class="button-container">
-                        <button @click="resetPrompt" class="reset-button">Reset</button>
+                        <button @click="resetPrompt" class="reset-button">Default</button>
                         <select v-model="selectedTemplate" @change="applyTemplate" class="template-select">
                             <option value="">Prompt</option>
                             <option v-for="template in promptTemplates" :key="template.id" :value="template.id.toString()">
@@ -27,7 +27,7 @@
                     </div>
                 </div>
                 <div>
-                    <textarea v-model="prompt" class="textarea" rows="6"></textarea>
+                    <textarea v-model="prompt" class="textarea" rows="3"></textarea>
                 </div>
             </div>
             <div>
@@ -35,7 +35,7 @@
                     <label>Defect Description:</label>
                 </div>
                 <div>
-                    <textarea v-model="defectDescription" class="textarea" rows="8"></textarea>
+                    <textarea v-model="defectDescription" class="textarea" rows="4"></textarea>
                 </div>
             </div>
             <div class="token-count">
@@ -48,7 +48,7 @@
                     <label>Generated Test Case:</label>
                 </div>
                 <div>
-                    <textarea v-model="testCase" class="textarea" rows="11"></textarea>
+                    <textarea v-model="generatedText" class="textarea" rows="11"></textarea>
                 </div>
             </div>
             <div v-if="isLoading" class="spinner-container">
@@ -59,12 +59,13 @@
             <div class="sticky-buttons">
                 <div class="button-container">
                     <button type="button" @click="clearLocalStorage">Clear</button>
-                    <button @click="get_ticket">Get a Asana ticket</button>
+                    <button @click="get_ticket">Get a Asana task</button>
+                    <button @click="openInNewTab">Open in New Tab</button>
                     <button @click="generate" :disabled="isLoading">Generate</button>
                 </div>
             </div>
         </div>
-        <Form v-else-if="currentTab === 'PopupTaskForm'" :testCase="testCase" :main_ticket="mainTicket" />
+        <Form v-else-if="currentTab === 'PopupTaskForm'" :testCase="generatedText" :main_ticket="mainTicket" />
         <Prompt v-else-if="currentTab === 'Prompt'" />
     </div>
 </template>
@@ -111,6 +112,7 @@ export default defineComponent({
         const prompt = ref<string>("");
         const defectDescription = ref<string>('');
         const testCase = ref<string>("");
+        const generatedText = ref<string>("");
         const mainTicket = ref<string>("");
         const selectedTemplate = ref<string>("");
         const promptTemplates = ref<Template[]>([]);
@@ -126,9 +128,8 @@ export default defineComponent({
         chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
             if (message.action === 'updateTestCase') {
                 // Update the testCase value based on the received message
-                testCase.value = message.testCase;
+                generatedText.value = message.testCase;
                 isLoading.value = false;
-                console.log('I am updated')
             }
         });
 
@@ -136,7 +137,6 @@ export default defineComponent({
             if (message.action === 'updateDefect') {
                 // Update the testCase value based on the received message
                 defectDescription.value = message.defectDescription;
-                console.log('update defect')
             }
         });
 
@@ -146,7 +146,7 @@ export default defineComponent({
                     isLoading: false,
                     prompt: '',
                     defectDescription: '',
-                    testCase: '',
+                    generatedText: '',
                     templates: null,
                     model: 'gpt-3.5-turbo',
                     temperature: 0.5,
@@ -158,7 +158,7 @@ export default defineComponent({
                     isLoading.value = data.isLoading;
                     prompt.value = data.prompt;
                     defectDescription.value = data.defectDescription;
-                    testCase.value = data.testCase;
+                    generatedText.value = data.generatedText;
                     promptTemplates.value = data.templates ? Object.values(data.templates) : [];
                     model.value = data.model;
                     temperature.value = Number(data.temperature);
@@ -218,14 +218,14 @@ export default defineComponent({
 
         function clearLocalStorage() {
             chrome.storage.sync.remove('defectDescription');
-            chrome.storage.sync.remove('testCase');
+            chrome.storage.sync.remove('generatedText');
             chrome.storage.sync.set({ "isLoading": false });
             defaultValue();
         }
 
         function defaultValue() {
             defectDescription.value = '';
-            testCase.value = '';
+            generatedText.value = '';
             isLoading.value = false;
         }
 
@@ -245,7 +245,6 @@ export default defineComponent({
                 mainTicket.value = url || "";
                 if (mainTicket.value.includes("asana")) {
                     const taskGid = extractTaskId(mainTicket.value);
-                    console.log(taskGid);
                     chrome.storage.sync.get(['asanaApiKey'], (data) => {
                         const asanaApiKey = data.asanaApiKey;
                         axios.get(`https://app.asana.com/api/1.0/tasks/${taskGid}`, {
@@ -274,6 +273,10 @@ export default defineComponent({
             window.close(); // Close the popup after opening the options page
         }
 
+        function openInNewTab() {
+            chrome.tabs.create({ url: 'popupPage.html' });
+        }
+
 
         // update prompt value when value changes
         watch(prompt, (newValue) => {
@@ -293,9 +296,9 @@ export default defineComponent({
         });
 
         // update defectDescription value when value changes
-        watch(testCase, (newValue) => {
+        watch(generatedText, (newValue) => {
             // Save the updated defectDescription value to sync storage
-            chrome.storage.sync.set({ "testCase": newValue }, () => {
+            chrome.storage.sync.set({ "generatedText": newValue }, () => {
                 if (chrome.runtime.lastError) {
                     console.error(chrome.runtime.lastError)
                 }
@@ -318,17 +321,25 @@ export default defineComponent({
             temperature,
             endpoint,
             source,
-            prompt, defectDescription, testCase, resetPrompt, generate, get_ticket,
+            prompt, defectDescription, generatedText, testCase, 
+            resetPrompt, generate, get_ticket,
             clearLocalStorage, isLoading,
             promptTemplates,
             selectedTemplate,
             applyTemplate,
-            openOptionsPage
+            openOptionsPage, 
+            openInNewTab
         };
     },
 });
 </script>
 <style scoped>
+
+#app {
+    width: 100%;
+    max-width: 800px; /* Set the maximum width to 600px */
+    margin: 0 auto; /* Center the content */
+}
 .textarea {
     width: 100%;
     white-space: pre-line;
@@ -413,12 +424,12 @@ export default defineComponent({
 }
 
 .sticky-buttons {
-  position: sticky;
-  bottom: 0;
-  background-color: white;
-  padding: 10px;
-  border-top: 1px solid #ccc;
-  z-index: 1;
+    position: sticky;
+    bottom: 0;
+    background-color: white;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    z-index: 1;
 }
 
 @keyframes spin {

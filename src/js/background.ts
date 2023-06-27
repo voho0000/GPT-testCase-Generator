@@ -9,9 +9,9 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 
-function generateTestCase() {
+function generateTestCase(action:string) {
   chrome.storage.sync.set({ "isLoading": true });
-  let prompt, defectDescription, model: string, temperature: number, endpoint: string, source, apiKey: string;
+  let prompt, defectDescription, model: string, temperature: number, endpoint: string, source, apiKey: string, testCases:string;
   let content;
   let headers;
   chrome.storage.sync.get(
@@ -26,9 +26,14 @@ function generateTestCase() {
     (data) => {
       ({ source, model, prompt, defectDescription, endpoint } = data);
       temperature = Number(data.temperature);
-      const fullPrompt = prompt + '\n' + defectDescription;
-      console.log(fullPrompt);
+      let fullPrompt:string;
       if (source == 'openai') {
+        // for 追問功能 use, in dev
+        if (action=='generateMore'){
+          fullPrompt = prompt + '\n' + defectDescription;
+        }else{
+          fullPrompt = prompt + '\n' + defectDescription;
+        }
         chrome.storage.sync.get(["openaiApiKey"], (data) => {
           if (data.openaiApiKey) {
             apiKey = data.openaiApiKey;
@@ -56,7 +61,7 @@ function generateTestCase() {
               console.log('axios.post request successful:', data);
               const test_steps = data['choices'][0]['message']['content'].trim();
               console.log(data);
-              chrome.storage.sync.set({ "testCase": test_steps });
+              chrome.storage.sync.set({ "generatedText": test_steps });
               chrome.storage.sync.set({ "isLoading": false });
               chrome.runtime.sendMessage({ action: 'updateTestCase', testCase: test_steps });
             })
@@ -65,6 +70,12 @@ function generateTestCase() {
             });
         });
       } else if (source == 'azure') {
+        // for 追問功能 use, in dev
+        if (action=='generateMore'){
+          fullPrompt = prompt + '\n' + defectDescription;
+        }else{
+          fullPrompt = prompt + '\n' + defectDescription;
+        }
         chrome.storage.sync.get(["azureApiKey"], (data) => {
           if (data.azureApiKey) {
             apiKey = data.azureApiKey;
@@ -92,7 +103,6 @@ function generateTestCase() {
           }
 
           const realEndpoint = `${endpoint}openai/deployments/${model}/chat/completions?api-version=2023-03-15-preview`;
-
           fetch(realEndpoint, {
             method: 'POST',
             headers,
@@ -102,7 +112,7 @@ function generateTestCase() {
             .then(data => {
               const test_steps = data['choices'][0]['message']['content'].trim();
               console.log(data);
-              chrome.storage.sync.set({ "testCase": test_steps });
+              chrome.storage.sync.set({ "generatedText": test_steps });
               chrome.storage.sync.set({ "isLoading": false });
               chrome.runtime.sendMessage({ action: 'updateTestCase', testCase: test_steps });
             })
@@ -117,18 +127,18 @@ function generateTestCase() {
 
 chrome.contextMenus.onClicked.addListener((info) => {
   if (info.menuItemId === "generateTestCase" && info.selectionText) {
-    console.log('Sending message to content script');
     const defectDescription = info.selectionText.replace(/ {2}/g, '\n');
-    console.log('I an clicked!')
-    console.log(defectDescription);
     chrome.storage.sync.set({ "defectDescription": defectDescription });
     chrome.runtime.sendMessage({ action: 'updateDefect', defectDescription: defectDescription });
-    generateTestCase()
+    generateTestCase('generate')
   }
 });
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === 'generate') {
-    generateTestCase()
+    generateTestCase('generate')
+  }
+  if (message.action === 'generateMore'){
+    generateTestCase('generateMore')
   }
 });

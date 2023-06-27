@@ -20,6 +20,13 @@ export default defineConfig({
   //root: resolve(__dirname, 'src'),
   server: {
     port: 3000,
-    // No 'hot' option for ServerOptions as of Vite 2.x
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        index: './index.html',
+        popupPage: './popupPage.html',
+      },
+    },
   },
 })
