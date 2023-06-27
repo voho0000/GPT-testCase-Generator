@@ -1,5 +1,6 @@
 export {};
 
+// add contextMenus event listener (selected text)
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "generateTestCase",
@@ -9,6 +10,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 
+// trigger generate test case
 function generateTestCase(action:string) {
   chrome.storage.sync.set({ "isLoading": true });
   let prompt, defectDescription, model: string, temperature: number, endpoint: string, source, apiKey: string, testCases:string;
@@ -125,6 +127,7 @@ function generateTestCase(action:string) {
   );
 }
 
+// listen to context menu click
 chrome.contextMenus.onClicked.addListener((info) => {
   if (info.menuItemId === "generateTestCase" && info.selectionText) {
     const defectDescription = info.selectionText.replace(/ {2}/g, '\n');
@@ -134,6 +137,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
   }
 });
 
+// listen to message from popup.vue
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === 'generate') {
     generateTestCase('generate')

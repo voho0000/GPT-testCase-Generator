@@ -1,7 +1,9 @@
 <template>
     <div class="prompt-container">
         <h2>Prompt Manager</h2>
+        <!-- Display templates -->
         <div class="template-container" v-for="template in templates" :key="template.id">
+            <!-- Editing mode -->
             <div v-if="template.isEditing" class="template-content">
                 <label>
                     Template Name
@@ -14,17 +16,22 @@
                         class="text-area"></textarea>
                 </label>
                 <p v-if="hasDuplicateName(template)" class="error-message">Template name must be unique.</p>
+            <!-- Display mode -->
             </div>
             <div v-else class="template-content">
                 <p class="template-name">{{ template.name }}</p>
             </div>
+            <!-- Template actions -->
             <div class="template-actions">
+                <!-- Edit button -->
                 <button @click="toggleEdit(template)" class="edit-button" :disabled="isSaveDisabled">{{
                     template.isEditing ? 'Save' : 'Edit'
                 }}</button>
+                <!-- Delete button -->
                 <button @click="deleteTemplate(template.id)" class="delete-button">Delete</button>
             </div>
         </div>
+        <!-- Add new template button -->
         <button @click="addTemplate" class="add-button">Add New Template</button>
     </div>
 </template>
@@ -67,30 +74,36 @@ export default defineComponent({
         };
 
         const addTemplate = async () => {
+            // Add a new template
             const newId = templates.value.length > 0 ? Math.max(...templates.value.map(t => t.id)) + 1 : 1;
             templates.value.push({ id: newId, name: "", content: "", isEditing: true });
             await saveTemplates();
         };
 
         const deleteTemplate = async (id: number) => {
+            // Delete a template
             templates.value = templates.value.filter(t => t.id !== id);
             await saveTemplates();
         };
 
         const toggleEdit = (template: Template) => {
+            // Toggle the isEditing property
             template.isEditing = !template.isEditing;
             if (!template.isEditing) {
+                // Truncate the name if it's too long
                 template.name = template.name.substring(0, 15);
                 saveTemplates(); // save the changes if the user finishes editing
             }
         };
 
         const hasDuplicateName = (template: Template) => {
+            // Check if there are any other templates with the same name
             const duplicateTemplates = templates.value.filter(t => t.name === template.name && t.id !== template.id);
             return duplicateTemplates.length > 0;
         };
 
         const isSaveDisabled = computed(() => {
+            // Disable the save button if there are any duplicate names
             const editingTemplate = templates.value.find(t => t.isEditing);
             return editingTemplate && hasDuplicateName(editingTemplate);
         });

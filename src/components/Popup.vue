@@ -30,6 +30,8 @@
                     <textarea v-model="prompt" class="textarea" rows="3"></textarea>
                 </div>
             </div>
+
+            <!-- Defect Description Section -->
             <div>
                 <div class="item-container">
                     <label>Defect Description:</label>
@@ -38,11 +40,15 @@
                     <textarea v-model="defectDescription" class="textarea" rows="4"></textarea>
                 </div>
             </div>
+
+            <!-- Token Count Section -->
             <div class="token-count">
                 <!--make the Note next line-->
                 <p>Token Count: {{ tokenCount }} (for reference only) <br>
                 </p> <!-- Display the token count -->
             </div>
+
+            <!-- Generated Test Case Section -->
             <div>
                 <div class="item-container">
                     <label>Generated Test Case:</label>
@@ -51,11 +57,15 @@
                     <textarea v-model="generatedText" class="textarea" rows="11"></textarea>
                 </div>
             </div>
+
+            <!-- Loading Spinner Section -->
             <div v-if="isLoading" class="spinner-container">
                 <div class="spinner"></div>
                 <p>Generating test case...</p>
             </div>
             <div v-else></div> <!-- Properly closed div for v-else -->
+
+            <!-- Sticky Buttons Section -->
             <div class="sticky-buttons">
                 <div class="button-container">
                     <button type="button" @click="clearLocalStorage">Clear</button>
@@ -65,7 +75,11 @@
                 </div>
             </div>
         </div>
+
+        <!-- Form Section -->
         <Form v-else-if="currentTab === 'PopupTaskForm'" :testCase="generatedText" :main_ticket="mainTicket" />
+
+        <!-- Prompt Section -->
         <Prompt v-else-if="currentTab === 'Prompt'" />
     </div>
 </template>
@@ -99,6 +113,7 @@ export default defineComponent({
         const currentTab = ref<string>("Popup");
 
         function changeTab(newTab: string) {
+            // Change the current tab
             currentTab.value = newTab;
             chrome.storage.sync.get(["templates"], (data) => {
                 if (data.templates) {
@@ -126,6 +141,7 @@ export default defineComponent({
         const apiKey = ref<string>('');
 
         chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+            // get the message from background script and update the testcase
             if (message.action === 'updateTestCase') {
                 // Update the testCase value based on the received message
                 generatedText.value = message.testCase;
@@ -134,6 +150,7 @@ export default defineComponent({
         });
 
         chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+            // get the message from background script and update the defect description
             if (message.action === 'updateDefect') {
                 // Update the testCase value based on the received message
                 defectDescription.value = message.defectDescription;
@@ -141,6 +158,7 @@ export default defineComponent({
         });
 
         onMounted(() => {
+            // Get the stored values from the chrome storage
             chrome.storage.sync.get(
                 {
                     isLoading: false,
@@ -166,12 +184,14 @@ export default defineComponent({
                     source.value = data.source;
                     defaultPrompt.value = data.defaultPrompt;
                     if (source.value == 'openai') {
+                        // Get the stored OpenAI API key
                         chrome.storage.sync.get(["openaiApiKey"], (data) => {
                             if (data.openaiApiKey) {
                                 apiKey.value = data.openaiApiKey;
                             }
                         });
                     } else if (source.value == 'azure') {
+                        // Get the stored Azure API key
                         chrome.storage.sync.get(["azureApiKey"], (data) => {
                             if (data.azureApiKey) {
                                 apiKey.value = data.azureApiKey;
@@ -185,6 +205,7 @@ export default defineComponent({
 
 
         function applyTemplate() {
+            // Apply the selected template to the prompt
             const template = promptTemplates.value.find(t => t.id.toString() === selectedTemplate.value);
             if (template) {
                 prompt.value = template.content;
@@ -192,16 +213,17 @@ export default defineComponent({
         };
 
         function resetPrompt() {
+            // Reset the prompt to the default prompt
             prompt.value = defaultPrompt.value;
             selectedTemplate.value = "";
             chrome.storage.sync.set({ "prompt": defaultPrompt });
         }
 
 
-
         function generate() {
+            // trigger generate test case event
             isLoading.value = true;
-            // Send a message to the background script with the necessary data
+            // Send a message to the background script to generate the test case
             chrome.runtime.sendMessage({
                 action: 'generate',
             });
@@ -217,6 +239,7 @@ export default defineComponent({
 
 
         function clearLocalStorage() {
+            // Clear the local storage
             chrome.storage.sync.remove('defectDescription');
             chrome.storage.sync.remove('generatedText');
             chrome.storage.sync.set({ "isLoading": false });
@@ -224,6 +247,7 @@ export default defineComponent({
         }
 
         function defaultValue() {
+            // Set the default values for the variables
             defectDescription.value = '';
             generatedText.value = '';
             isLoading.value = false;
@@ -239,14 +263,18 @@ export default defineComponent({
         }
 
         function get_ticket() {
+            // Get the asana ticket from the active tab
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const activeTab = tabs[0];
                 const url = activeTab.url;
                 mainTicket.value = url || "";
                 if (mainTicket.value.includes("asana")) {
+                    // Extract the task id from the url
                     const taskGid = extractTaskId(mainTicket.value);
+                    // Get the asana API key from the chrome storage
                     chrome.storage.sync.get(['asanaApiKey'], (data) => {
                         const asanaApiKey = data.asanaApiKey;
+                        // Get the task details from the asana API
                         axios.get(`https://app.asana.com/api/1.0/tasks/${taskGid}`, {
                             headers: {
                                 'Authorization': `Bearer ${asanaApiKey}`,
@@ -269,11 +297,13 @@ export default defineComponent({
         }
 
         function openOptionsPage() {
+            // open the options page
             chrome.runtime.openOptionsPage();
             window.close(); // Close the popup after opening the options page
         }
 
         function openInNewTab() {
+            // open the popup page in a new tab
             chrome.tabs.create({ url: 'popupPage.html' });
         }
 
@@ -306,6 +336,7 @@ export default defineComponent({
             );
         });
 
+        // for token count use
         watch([prompt, defectDescription], ([newPrompt, newDefectDescription]) => {
             const fullPrompt = `${newPrompt || ''}\n${newDefectDescription || ''}`;
             const encoded = encode(fullPrompt);
@@ -321,25 +352,27 @@ export default defineComponent({
             temperature,
             endpoint,
             source,
-            prompt, defectDescription, generatedText, testCase, 
+            prompt, defectDescription, generatedText, testCase,
             resetPrompt, generate, get_ticket,
             clearLocalStorage, isLoading,
             promptTemplates,
             selectedTemplate,
             applyTemplate,
-            openOptionsPage, 
+            openOptionsPage,
             openInNewTab
         };
     },
 });
 </script>
 <style scoped>
-
 #app {
     width: 100%;
-    max-width: 800px; /* Set the maximum width to 600px */
-    margin: 0 auto; /* Center the content */
+    max-width: 800px;
+    /* Set the maximum width to 600px */
+    margin: 0 auto;
+    /* Center the content */
 }
+
 .textarea {
     width: 100%;
     white-space: pre-line;
