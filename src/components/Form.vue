@@ -214,7 +214,7 @@ export default defineComponent({
                     splitText.forEach(paragraph => {
                         testCaseText = paragraph;
                         preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
-                        testStepSplit = preConditionSplit[1].split(/(?:Test Step[:：])/);
+                        testStepSplit = preConditionSplit[1].split(/(?:Test Steps?[:：])/);
                         expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
 
                         // to remove the warning words from GPT

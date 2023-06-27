@@ -227,7 +227,7 @@ export default defineComponent({
             chrome.runtime.sendMessage({
                 action: 'generate',
             });
-
+            // *** TODO: error handling
             // Set a timeout of 5 minutes (300000 milliseconds)
             const timeout = 300000;
             setTimeout(() => {
