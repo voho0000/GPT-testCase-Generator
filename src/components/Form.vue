@@ -208,14 +208,14 @@ export default defineComponent({
         function getTestCase() {
             // to parse the raw generated test case to four section (name, pre-condition, testStep, expectedResult)
             let splitText, testCaseText, preConditionSplit, testStepSplit, expectedResultSplit;
-            if (inputText.includes("Name:") || inputText.includes("Name：")) {
-                splitText = inputText.split(/(?:\d+\.\s)?(?:Name[:：])/).slice(1);
+            if (inputText.includes("Name:") || inputText.includes("Name：")|| inputText.includes("名稱：") || inputText.includes("名稱:")) {
+                splitText = inputText.split(/(?:\d+\.\s)?(?:Name[:：]|名稱[:：])/).slice(1);
                 if (splitText.length > 0) {
                     splitText.forEach(paragraph => {
                         testCaseText = paragraph;
-                        preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：])/);
-                        testStepSplit = preConditionSplit[1].split(/(?:Test Steps?[:：])/);
-                        expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：])/);
+                        preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：]|前置條件[:：])/);
+                        testStepSplit = preConditionSplit[1].split(/(?:Test Steps?[:：]|測試步驟[:：])/);
+                        expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：]|預期結果[:：])/);
 
                         // to remove the warning words from GPT
                         let expectedResult = expectedResultSplit[1].trim();
@@ -225,9 +225,9 @@ export default defineComponent({
 
                         const testCase = {
                             name: preConditionSplit[0].trim(),
-                            preCondition: testStepSplit[0].trim(),
-                            testStep: expectedResultSplit[0].trim(),
-                            expectedResult: expectedResult
+                            preCondition: testStepSplit[0].replace(/^\s+/gm, ''),
+                            testStep: expectedResultSplit[0].replace(/^\s+/gm, ''),
+                            expectedResult: expectedResult.replace(/^\s+/gm, '')
                         };
                         testCases.value.push(testCase);
                     }

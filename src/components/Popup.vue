@@ -170,7 +170,7 @@ export default defineComponent({
                     temperature: 0.5,
                     endpoint: '',
                     source: 'openai',
-                    defaultPrompt: '',
+                    defaultPrompt: '我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述來產出之後在進行手動測試時能涵蓋到此缺陷測試的測試案例，需去除使用者的可識別資訊，預期結果為正常結果，若有附上PRD，還需要增加能涵蓋PRD的使用情境的測試案例，若無附上則不用，產生的測試案例需要包含名稱, 前置條件, 測試步驟, 預期結果',
                 },
                 (data) => {
                     isLoading.value = data.isLoading;
