@@ -97,7 +97,7 @@
                 <p>Creating asana ticket...</p>
             </div>
             <div v-else></div> <!-- Properly closed div for v-else -->
-             <!-- Button container -->
+            <!-- Button container -->
             <div class="button-container">
                 <button type="button" @click="clearLocalStorage">Clear</button>
                 <button type="submit" :disabled="isCreateLoading">Create</button>
@@ -207,34 +207,62 @@ export default defineComponent({
 
         function getTestCase() {
             // to parse the raw generated test case to four section (name, pre-condition, testStep, expectedResult)
-            let splitText, testCaseText, preConditionSplit, testStepSplit, expectedResultSplit;
-            if (inputText.includes("Name:") || inputText.includes("Name：")|| inputText.includes("名稱：") || inputText.includes("名稱:")) {
+            let splitText, testCaseText, preConditionSplit, testStepSplit, expectedResultSplit, PreCondition, TestStep, ExpectedResult;
+            if (inputText.includes("Name:") || inputText.includes("Name：") || inputText.includes("名稱：") || inputText.includes("名稱:")) {
                 splitText = inputText.split(/(?:\d+\.\s)?(?:Name[:：]|名稱[:：])/).slice(1);
                 if (splitText.length > 0) {
                     splitText.forEach(paragraph => {
-                        testCaseText = paragraph;
-                        preConditionSplit = testCaseText.split(/(?:Pre-Condition[:：]|前置條件[:：])/);
+                        preConditionSplit = paragraph.split(/(?:Pre-Condition[:：]|前置條件[:：])/);
                         testStepSplit = preConditionSplit[1].split(/(?:Test Steps?[:：]|測試步驟[:：])/);
                         expectedResultSplit = testStepSplit[1].split(/(?:Expected Result[:：]|預期結果[:：])/);
 
-                        // to remove the warning words from GPT
-                        let expectedResult = expectedResultSplit[1].trim();
-                        if (expectedResult.includes('\n\n')) {
-                            expectedResult = expectedResult.split('\n\n')[0];
+                        if (testStepSplit) {
+                            PreCondition = testStepSplit[0];
+                            if (PreCondition.includes('\n\n')) {
+                                PreCondition = PreCondition.split('\n\n')[0];
+                            }
+                            // remove useless space
+                            PreCondition = PreCondition.replace(/^\s+/gm, '');
+                            // remove useless dash at the end of the line
+                            PreCondition = PreCondition.replace(/\n-\s?$/g, '');
+                        }else{
+                            PreCondition = '';
                         }
 
+                        if (expectedResultSplit) {
+                            TestStep = expectedResultSplit[0];
+                            if (TestStep.includes('\n\n')) {
+                                TestStep = TestStep.split('\n\n')[0];
+                            }
+                            TestStep = TestStep.replace(/^\s+/gm, '');
+                            TestStep = TestStep.replace(/\n-\s?$/g, '')
+                        }else{
+                            TestStep = '';
+                        }
+
+                        if (expectedResultSplit.length > 1) {
+                            ExpectedResult = expectedResultSplit[1];
+                            if (ExpectedResult.includes('\n\n')) {
+                                ExpectedResult = ExpectedResult.split('\n\n')[0];
+                            }
+                            ExpectedResult = ExpectedResult.replace(/^\s+/gm, '');
+                            ExpectedResult = ExpectedResult.replace(/\n-\s?$/g, '')
+                        }else{
+                            ExpectedResult = '';
+                        }
+
+
                         const testCase = {
-                            name: preConditionSplit[0].trim(),
-                            preCondition: testStepSplit[0].replace(/^\s+/gm, ''),
-                            testStep: expectedResultSplit[0].replace(/^\s+/gm, ''),
-                            expectedResult: expectedResult.replace(/^\s+/gm, '')
+                            name: preConditionSplit ? preConditionSplit[0].trim() : '',
+                            preCondition: PreCondition,
+                            testStep: TestStep,
+                            expectedResult: ExpectedResult
                         };
                         testCases.value.push(testCase);
                     }
                     )
                 }
             }
-
         }
 
         function selectTestCase(index: number) {

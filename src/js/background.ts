@@ -60,9 +60,7 @@ function generateTestCase(action:string) {
           })
             .then(response => response.json())
             .then(data => {
-              console.log('axios.post request successful:', data);
               const test_steps = data['choices'][0]['message']['content'].trim();
-              console.log(data);
               chrome.storage.sync.set({ "generatedText": test_steps });
               chrome.storage.sync.set({ "isLoading": false });
               chrome.runtime.sendMessage({ action: 'updateTestCase', testCase: test_steps });
@@ -113,7 +111,6 @@ function generateTestCase(action:string) {
             .then(response => response.json())
             .then(data => {
               const test_steps = data['choices'][0]['message']['content'].trim();
-              console.log(data);
               chrome.storage.sync.set({ "generatedText": test_steps });
               chrome.storage.sync.set({ "isLoading": false });
               chrome.runtime.sendMessage({ action: 'updateTestCase', testCase: test_steps });
