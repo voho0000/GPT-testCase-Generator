@@ -101,7 +101,7 @@ function generateTestCase(action:string) {
 
           // check model name format
           if (model == 'gpt-3.5-turbo') {
-            model = 'gpt-35-turbo'
+            model = 'gpt-35-turbo-0301'
           }
 
           const realEndpoint = `${endpoint}openai/deployments/${model}/chat/completions?api-version=2023-03-15-preview`;
