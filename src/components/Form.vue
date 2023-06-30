@@ -94,7 +94,7 @@
             <!-- Display spinner while creating a task -->
             <div v-if="isCreateLoading" class="spinner-container">
                 <div class="spinner"></div>
-                <p>Creating asana ticket...</p>
+                <p>Creating Jira ticket...</p>
             </div>
             <div v-else></div> <!-- Properly closed div for v-else -->
             <!-- Button container -->
@@ -118,8 +118,8 @@
 import { defineComponent, ref, watch, onMounted } from 'vue';
 import Multiselect from '@vueform/multiselect'
 import Navigation from "./Navigation.vue";
-import { caseSuiteOptions, manualTestCoverageOptions, manualTestEnvironmentOptions, caseSourceOptions, generatedByOptions } from './AsanaOptions';
-import { createAsanaTask } from './AsanaField';
+import { caseSuiteOptions, manualTestCoverageOptions, manualTestEnvironmentOptions, caseSourceOptions, generatedByOptions } from './JiraOptions';
+import { createJiraTask } from './JiraField';
 
 
 export default defineComponent({
@@ -279,6 +279,37 @@ export default defineComponent({
         }
 
 
+        // function createTask() {
+        //     // Implement the logic for creating a task using the form data
+        //     chrome.storage.sync.get("formData", (data) => {
+        //         if (data.formData) {
+        //             const formDataString = data.formData;
+        //             if (formDataString) {
+        //                 const formData = JSON.parse(formDataString);
+        //                 isCreateLoading.value = true;
+        //                 chrome.storage.sync.set({ "isCreateLoading": true });
+        //                 const projectGid = '10058';  //jira test case warehouse project id
+        //                 chrome.storage.sync.get(['jiraApiKey'], (data) => {
+        //                     const jiraApiKey = data.jiraApiKey;
+        //                     createTask(formData, projectGid, jiraApiKey)
+        //                         .then(task_url => {
+        //                             taskUrl.value = task_url.task_url;
+        //                             chrome.storage.sync.set({ taskUrl: taskUrl.value });
+        //                             isCreateLoading.value = false;
+        //                             chrome.storage.sync.set({ "isCreateLoading": false });
+        //                         })
+        //                         .catch(error => {
+        //                             // Handle error
+        //                             console.log(error);
+        //                         });
+        //                 })
+        //             } else {
+        //                 console.error("No formData found in localStorage");
+        //             };
+        //         }
+        //     });
+
+        // }
         function createTask() {
             // Implement the logic for creating a task using the form data
             chrome.storage.sync.get("formData", (data) => {
@@ -288,12 +319,14 @@ export default defineComponent({
                         const formData = JSON.parse(formDataString);
                         isCreateLoading.value = true;
                         chrome.storage.sync.set({ "isCreateLoading": true });
-                        const projectGid = '1203880491753826';  //master script
-                        chrome.storage.sync.get(['asanaApiKey'], (data) => {
-                            const asanaApiKey = data.asanaApiKey;
-                            createAsanaTask(formData, projectGid, asanaApiKey)
+                        const projectGid = '10058';  //testcase warehouse
+                        chrome.storage.sync.get(['jiraApiKey'], (data) => {
+                            const jiraApiKey = data.jiraApiKey;
+                            chrome.storage.sync.get(['Email'], (data) => {
+                            const email = data.Email;
+                                createJiraTask(formData, projectGid,email, jiraApiKey)
                                 .then(task_url => {
-                                    taskUrl.value = task_url.task_url;
+                                    taskUrl.value = `https://aics-his.atlassian.net/jira/software/c/projects/TC/issues/`+task_url.task_url;
                                     chrome.storage.sync.set({ taskUrl: taskUrl.value });
                                     isCreateLoading.value = false;
                                     chrome.storage.sync.set({ "isCreateLoading": false });
@@ -302,6 +335,7 @@ export default defineComponent({
                                     // Handle error
                                     console.log(error);
                                 });
+                            })
                         })
                     } else {
                         console.error("No formData found in localStorage");

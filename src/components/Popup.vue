@@ -69,7 +69,7 @@
             <div class="sticky-buttons">
                 <div class="button-container">
                     <button type="button" @click="clearLocalStorage">Clear</button>
-                    <button @click="get_ticket">Get a Asana task</button>
+                    <button @click="get_jira_ticket">Get a Jira task</button>
                     <button @click="openInNewTab">Open in New Tab</button>
                     <button @click="generate" :disabled="isLoading">Generate</button>
                 </div>
@@ -253,48 +253,67 @@ export default defineComponent({
             isLoading.value = false;
         }
 
-        function extractTaskId(url: string): string | null {
-            // Regular expression to match either pattern
-            //const taskIdRegex = /\/(\d+)(?:\/[a-zA-Z])?(?:\/?)$/;
-            let match = url.match(/child=(\d+)|\/(\d+)\/f|\/(\d+)$/);
-            const taskId = match ? match[1] || match[2] || match[3] : null;
+        function extractJiraTaskId(url: string): string | null {
+            const regex = /XD-\d+/;
+            const match = url.match(regex);
+            if (match) {
+                return match[0]
+            }
 
-            return taskId
+            return ""
         }
 
-        function get_ticket() {
-            // Get the asana ticket from the active tab
+        function get_jira_ticket() {
+            // Get the jira ticket from the active tab
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const activeTab = tabs[0];
                 const url = activeTab.url;
                 mainTicket.value = url || "";
-                if (mainTicket.value.includes("asana")) {
+                if (mainTicket.value.includes("aics-his.atlassian.net/jira")) {
                     // Extract the task id from the url
-                    const taskGid = extractTaskId(mainTicket.value);
+                    const taskGid = extractJiraTaskId(mainTicket.value);
                     // Get the asana API key from the chrome storage
-                    chrome.storage.sync.get(['asanaApiKey'], (data) => {
-                        const asanaApiKey = data.asanaApiKey;
-                        // Get the task details from the asana API
-                        axios.get(`https://app.asana.com/api/1.0/tasks/${taskGid}`, {
-                            headers: {
-                                'Authorization': `Bearer ${asanaApiKey}`,
-                            },
-                        })
-                            .then(response => {
-                                const task = response.data.data;
-                                const permanentLink = task.permalink_url;
-                                const taskDescription = task.notes;
-                                mainTicket.value = permanentLink;
-                                chrome.storage.sync.set({ "mainTicket": permanentLink });
-                                defectDescription.value = taskDescription;
+                    chrome.storage.sync.get(['JiraApiKey'], (data) => {
+                        const JiraApiKey = data.JiraApiKey;
+                        chrome.storage.sync.get(['Email'],(data) => {
+                            // Get the task details from the asana API
+                            const email = data.Email;
+                            axios.get(`https://aics-his.atlassian.net/rest/api/2/issue/${taskGid}`, {
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                auth: {
+                                    username: email,
+                                    password: JiraApiKey
+                                }
                             })
-                            .catch(error => {
-                                console.log(error);
-                            });
+                                .then(response => {
+                                    const task = response.data.fields;
+                                    const title = task.summary;
+                                    const expectResult = task.customfield_10144
+                                    const prd = task.customfield_10145
+                                    const testStep = task.customfield_10143
+                                    const description = task.description
+
+                                    chrome.storage.sync.set({ "mainTicket": mainTicket.value });
+                                    if (testStep !== null){
+                                        defectDescription.value = "標題: " + title+"\n測試步驟: "+testStep+"\n預期結果: "+expectResult;
+                                        if (prd !== null){
+                                            defectDescription.value += "\nprd: "
+                                            defectDescription.value += prd
+                                        }
+                                    } else{
+                                        defectDescription.value = "標題: " + title+"\n敘述: "+description;
+                                    }
+                                })
+                                .catch(error => {
+                                    console.log(error);
+                                });
+                        })
                     })
                 }
             });
-        }
+        }        
 
         function openOptionsPage() {
             // open the options page
@@ -353,7 +372,7 @@ export default defineComponent({
             endpoint,
             source,
             prompt, defectDescription, generatedText, testCase,
-            resetPrompt, generate, get_ticket,
+            resetPrompt, generate, get_jira_ticket,
             clearLocalStorage, isLoading,
             promptTemplates,
             selectedTemplate,

@@ -13,10 +13,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const openaiApiKeyInput = document.querySelector('#openaiApiKey') as HTMLInputElement;
   const azureApiKeyToggle = document.querySelector('#azureApiKeyToggle') as HTMLSpanElement;
   const openaiApiKeyToggle = document.querySelector('#openaiApiKeyToggle') as HTMLSpanElement;
-  const asanaApiKeyToggle = document.querySelector('#asanaApiKeyToggle') as HTMLSpanElement;
+  const EmailToggle = document.querySelector('#EmailToggle') as HTMLSpanElement;
+  const JiraApiKeyToggle = document.querySelector('#JiraApiKeyToggle') as HTMLSpanElement;
   const azureApiKeyLabel = document.querySelector('#azureApiKeyLabel') as HTMLLabelElement;
   const openaiApiKeyLabel = document.querySelector('#openaiApiKeyLabel') as HTMLLabelElement;
-  const asanaApiKeyInput = document.querySelector('#asanaApiKey') as HTMLInputElement; // Add reference to the Asana API key input field
+  const EmailInput = document.querySelector('#Email') as HTMLInputElement; // Add reference to the Email input field
+  const JiraApiKeyInput = document.querySelector('#JiraApiKey') as HTMLInputElement; // Add reference to the Jira API key input field
   const modelSelect = document.querySelector('#model') as HTMLSelectElement;
   const defaultPromptTextarea = document.querySelector('#defaultPrompt') as HTMLTextAreaElement; // Add reference to the default prompt textarea
 
@@ -28,11 +30,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const endpoint = (document.querySelector('#endpoint') as HTMLInputElement).value;
     const azureApiKey = azureApiKeyInput.value;
     const openaiApiKey = openaiApiKeyInput.value;
-    const asanaApiKey = asanaApiKeyInput.value;
+    const Email = EmailInput.value;
+    const JiraApiKey = JiraApiKeyInput.value;
     const defaultPrompt = defaultPromptTextarea.value;
     if (source === 'openai') {
       chrome.storage.sync.set(
-        { temperature, model, source, openaiApiKey, asanaApiKey, defaultPrompt },
+        { temperature, model, source, openaiApiKey,Email, JiraApiKey, defaultPrompt },
         () => {
           const status = document.getElementById('status');
           if (status) {
@@ -45,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
       );
     } else if (source === 'azure') {
       chrome.storage.sync.set(
-        { temperature, model, source, endpoint, azureApiKey, asanaApiKey, defaultPrompt },
+        { temperature, model, source, endpoint, azureApiKey,Email, JiraApiKey, defaultPrompt },
         () => {
           const status = document.getElementById('status');
           if (status) {
@@ -68,7 +71,8 @@ document.addEventListener('DOMContentLoaded', function () {
         endpoint: '',
         azureApiKey: '',
         openaiApiKey: '',
-        asanaApiKey: '',
+        Email: '',
+        JiraApiKey: '',
         defaultPrompt: '我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述來產出之後在進行手動測試時能涵蓋到此缺陷測試的測試案例，需去除使用者的可識別資訊，預期結果為正常結果，若有附上PRD，還需要增加能涵蓋PRD的使用情境的測試案例，若無附上則不用，產生的測試案例需要包含名稱, 前置條件, 測試步驟, 預期結果'
       },
       function (data) {
@@ -80,7 +84,8 @@ document.addEventListener('DOMContentLoaded', function () {
         (document.querySelector('#endpoint') as HTMLInputElement).value = data.endpoint;
         azureApiKeyInput.value = data.azureApiKey;
         openaiApiKeyInput.value = data.openaiApiKey;
-        asanaApiKeyInput.value = data.asanaApiKey;
+        EmailInput.value = data.Email
+        JiraApiKeyInput.value = data.JiraApiKey;
         defaultPromptTextarea.value = data.defaultPrompt; // Set the value of the default prompt textarea
 
         toggleEndpointField(data.source);
@@ -189,8 +194,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // Set up toggle for OpenAI API Key
   togglePasswordVisibility(openaiApiKeyInput, openaiApiKeyToggle);
 
+  // Set up toggle for Email
+  togglePasswordVisibility(EmailInput, EmailToggle);
+
   // Set up toggle for Asana API Key
-  togglePasswordVisibility(asanaApiKeyInput, asanaApiKeyToggle);
+  togglePasswordVisibility(JiraApiKeyInput, JiraApiKeyToggle);
 
   restoreOptions();
 });
