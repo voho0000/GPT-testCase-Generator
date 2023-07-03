@@ -295,7 +295,7 @@ export default defineComponent({
                                     const testStep = task.customfield_10143
                                     const description = task.description
 
-                                    chrome.storage.sync.set({ "mainTicket": mainTicket.value });
+                                    chrome.storage.sync.set({ "mainTicket": `https://aics-his.atlassian.net/jira/software/c/projects/XD/issues/${taskGid}` });
                                     if (testStep !== null){
                                         defectDescription.value = "標題: " + title+"\n測試步驟: "+testStep+"\n預期結果: "+expectResult;
                                         if (prd !== null){

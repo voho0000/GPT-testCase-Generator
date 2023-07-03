@@ -27,19 +27,9 @@ interface CustomField {
     enum_options?: EnumOption[];
 }
 
-interface CustomFieldSetting {
-    custom_field: CustomField;
-}
-
 export async function createJiraTask(formData: FormData, projectGid: string, email: string, apiKey: string) {
-    const task_id_pattern = /(\d+)(\/f)?$/;
-    const match = formData.mainTicket.match(task_id_pattern);
-
-    if (!match) {
-        throw new Error("Please provide jira task URL");
-    }
-    let name = "[MS] " + formData.name
-
+    let name = "[MS][AI] " + formData.name;
+    name = name.replace(/\n$/, '');
     const result: any = await axios.post("https://aics-his.atlassian.net/rest/api/2/issue", 
         {
             "fields": {
@@ -55,9 +45,7 @@ export async function createJiraTask(formData: FormData, projectGid: string, ema
                 "customfield_10187": {"value":"MS Backlog"},
                 "customfield_10168": {"value":formData.generatedBy},
                 "customfield_10166": formData.mainTicket,
-                "customfield_10158": formData.caseSuite.map((value) => ({ value })),
                 "customfield_10174": {"value":formData.manualTestCoverage},
-                "customfield_10160": {"value":formData.manualTestEnvironment},
                 "customfield_10159": {"value":formData.caseSource},
                 "priority": {"id":"3"},
                 "customfield_10155": formData.preCondition,
@@ -99,5 +87,27 @@ export async function createJiraTask(formData: FormData, projectGid: string, ema
             password: apiKey
         }
     })
+    // update defect MasterScript status to AI Generate
+    const regex = /XD-\d+/;
+    const match = formData.mainTicket.match(regex);
+    const updatePayload = {
+        "fields": {
+            "customfield_10146": {
+            value: 'AI Generate',
+          },
+        },
+    };
+    const updateDefect: any = await axios.put("https://aics-his.atlassian.net/rest/api/3/issue/"+match![0],
+    updatePayload,
+    {
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        auth: {
+            username: email,
+            password: apiKey
+        }
+    })
+    
     return { task_url: result.data.key }
 }
