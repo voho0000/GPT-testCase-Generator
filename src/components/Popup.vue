@@ -77,7 +77,7 @@
         </div>
 
         <!-- Form Section -->
-        <Form v-else-if="currentTab === 'PopupTaskForm'" :testCase="generatedText" :main_ticket="mainTicket" />
+        <Form v-else-if="currentTab === 'PopupTaskForm'" :testCase="generatedText" :main_ticket="mainTicket" :defect_title="defectTitle"/>
 
         <!-- Prompt Section -->
         <Prompt v-else-if="currentTab === 'Prompt'" />
@@ -128,6 +128,8 @@ export default defineComponent({
         const defectDescription = ref<string>('');
         const testCase = ref<string>("");
         const generatedText = ref<string>("");
+        const defectTitle = ref<string>("");
+        const defect_title = ref<string>("");
         const mainTicket = ref<string>("");
         const selectedTemplate = ref<string>("");
         const promptTemplates = ref<Template[]>([]);
@@ -137,6 +139,8 @@ export default defineComponent({
         const model = ref<string>('gpt-3.5-turbo');
         const temperature = ref<number>(0.5);
         const endpoint = ref<string>('');
+        const Email = ref<string>('');
+        const JiraApiKey = ref<string>('');
         const source = ref<string>('openai');
         const apiKey = ref<string>('');
 
@@ -165,10 +169,13 @@ export default defineComponent({
                     prompt: '',
                     defectDescription: '',
                     generatedText: '',
+                    defectTitle: '',
                     templates: null,
                     model: 'gpt-3.5-turbo',
                     temperature: 0.5,
                     endpoint: '',
+                    Email:'',
+                    JiraApiKey:'',
                     source: 'openai',
                     defaultPrompt: '我是一位測試工程師，請用繁體中文回答問題，利用以下缺陷描述來產出之後在進行手動測試時能涵蓋到此缺陷測試的測試案例，需去除使用者的可識別資訊，預期結果為正常結果，若有附上PRD，還需要增加能涵蓋PRD的使用情境的測試案例，若無附上則不用，產生的測試案例需要包含名稱, 前置條件, 測試步驟, 預期結果',
                 },
@@ -177,10 +184,13 @@ export default defineComponent({
                     prompt.value = data.prompt;
                     defectDescription.value = data.defectDescription;
                     generatedText.value = data.generatedText;
+                    defectTitle.value = data.defectTitle;
                     promptTemplates.value = data.templates ? Object.values(data.templates) : [];
                     model.value = data.model;
                     temperature.value = Number(data.temperature);
                     endpoint.value = data.endpoint;
+                    JiraApiKey.value = data.JiraApiKey;
+                    Email.value = data.Email;
                     source.value = data.source;
                     defaultPrompt.value = data.defaultPrompt;
                     if (source.value == 'openai') {
@@ -189,6 +199,9 @@ export default defineComponent({
                             if (data.openaiApiKey) {
                                 apiKey.value = data.openaiApiKey;
                             }
+                            else{
+                                window.alert("Please setup gpt Api Key first!");
+                            }
                         });
                     } else if (source.value == 'azure') {
                         // Get the stored Azure API key
@@ -196,7 +209,19 @@ export default defineComponent({
                             if (data.azureApiKey) {
                                 apiKey.value = data.azureApiKey;
                             }
+                            else{
+                                window.alert("Please setup gpt Api Key first!");
+                            }
                         });
+                    }
+                    if(source.value == 'azure' && endpoint.value === ""){
+                        window.alert("Please setup endpoint first!");
+                    }
+                    if(Email.value === ""){
+                        window.alert("Please setup Email first!");
+                    }
+                    if(JiraApiKey.value === ""){
+                        window.alert("Please setup Jira Api Key first!");
                     }
                 }
             );
@@ -242,6 +267,7 @@ export default defineComponent({
             // Clear the local storage
             chrome.storage.sync.remove('defectDescription');
             chrome.storage.sync.remove('generatedText');
+            chrome.storage.sync.remove('defectTitle');
             chrome.storage.sync.set({ "isLoading": false });
             defaultValue();
         }
@@ -250,11 +276,12 @@ export default defineComponent({
             // Set the default values for the variables
             defectDescription.value = '';
             generatedText.value = '';
+            defectTitle.value = '';
             isLoading.value = false;
         }
 
         function extractJiraTaskId(url: string): string | null {
-            const regex = /XD-\d+/;
+            const regex = /(CED-\d+|XD-\d+|XFT-\d+)/;
             const match = url.match(regex);
             if (match) {
                 return match[0]
@@ -269,7 +296,7 @@ export default defineComponent({
                 const activeTab = tabs[0];
                 const url = activeTab.url;
                 mainTicket.value = url || "";
-                if (mainTicket.value.includes("aics-his.atlassian.net/jira")) {
+                if (mainTicket.value.includes("aics-his.atlassian.net/")) {
                     // Extract the task id from the url
                     const taskGid = extractJiraTaskId(mainTicket.value);
                     // Get the asana API key from the chrome storage
@@ -294,7 +321,8 @@ export default defineComponent({
                                     const prd = task.customfield_10145
                                     const testStep = task.customfield_10143
                                     const description = task.description
-
+                                    defectTitle.value = title;
+                                    chrome.storage.sync.set({ "defectTitle": title });
                                     chrome.storage.sync.set({ "mainTicket": `https://aics-his.atlassian.net/jira/software/c/projects/XD/issues/${taskGid}` });
                                     if (testStep !== null){
                                         defectDescription.value = "標題: " + title+"\n測試步驟: "+testStep+"\n預期結果: "+expectResult;
@@ -355,6 +383,11 @@ export default defineComponent({
             );
         });
 
+        watch(defectTitle, (newValue) => {
+            // Save the updated defectDescription value to sync storage
+            chrome.storage.sync.set({ "defectTitle": newValue });
+        });
+
         // for token count use
         watch([prompt, defectDescription], ([newPrompt, newDefectDescription]) => {
             const fullPrompt = `${newPrompt || ''}\n${newDefectDescription || ''}`;
@@ -370,8 +403,10 @@ export default defineComponent({
             model,
             temperature,
             endpoint,
+            Email,
+            JiraApiKey,
             source,
-            prompt, defectDescription, generatedText, testCase,
+            prompt, defectDescription, generatedText, defectTitle, testCase, defect_title,
             resetPrompt, generate, get_jira_ticket,
             clearLocalStorage, isLoading,
             promptTemplates,

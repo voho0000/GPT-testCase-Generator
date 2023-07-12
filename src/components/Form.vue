@@ -117,6 +117,10 @@ export default defineComponent({
             type: String,
             default: '',
         },
+        defect_title: {
+            type: String,
+            default: '',
+        },
         main_ticket: {
             type: String,
             default: '',
@@ -151,6 +155,7 @@ export default defineComponent({
         const testCases = ref<TestCase[]>([]);
 
         const inputText = props.testCase;
+        const defectTitle = props.defect_title;
 
 
         onMounted(() => {
@@ -235,14 +240,23 @@ export default defineComponent({
                         }else{
                             ExpectedResult = '';
                         }
-
-
                         const testCase = {
-                            name: preConditionSplit ? preConditionSplit[0].trim() : '',
+                            name: props.defect_title,
                             preCondition: PreCondition,
                             testStep: TestStep,
                             expectedResult: ExpectedResult
                         };
+                        testCase.name = testCase.name.replace("[GoLive]", "");
+                        testCase.name = testCase.name.replace("[GoLive/Remote]", "");
+                        testCase.name = testCase.name.replace("[Stage]", "");
+                        testCase.name = testCase.name.replace("[STAGE]", "");
+                        testCase.name = testCase.name.replace("[StageHotfix]", "");
+                        testCase.name = testCase.name.replace("[INT]", "");
+                        testCase.name = testCase.name.replace("[INTT]", "");
+                        testCase.name = testCase.name.replace("[IntRegular]", "");
+                        testCase.name = testCase.name.replace("[DEV]", "");
+                        testCase.name = testCase.name.replace("[Dev]", "");
+                        testCase.name = testCase.name.replace("[dev]", "");
                         testCases.value.push(testCase);
                     }
                     )
@@ -264,6 +278,8 @@ export default defineComponent({
         }
 
         function createTask() {
+            taskUrl.value = ''
+            chrome.storage.sync.remove('taskUrl')
             // Implement the logic for creating a task using the form data
             chrome.storage.sync.get("formData", (data) => {
                 if (data.formData) {
@@ -286,6 +302,7 @@ export default defineComponent({
                                 })
                                 .catch(error => {
                                     // Handle error
+                                    window.alert(error);
                                     console.log(error);
                                 });
                             })
